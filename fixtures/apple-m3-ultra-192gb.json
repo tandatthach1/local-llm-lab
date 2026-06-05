@@ -1,0 +1,18 @@
+{
+  "name": "Mock Apple Silicon Ultra-class 192GB",
+  "os": "macOS",
+  "arch": "arm64",
+  "cpu": "Apple Silicon Ultra-class",
+  "gpu": "Integrated Apple GPU",
+  "unified_memory": true,
+  "memory_total_gib": 192.0,
+  "memory_available_gib": 166.0,
+  "disk_available_gib": 2500.0,
+  "memory_bandwidth_gbps": 800.0,
+  "metal": true,
+  "cuda": false,
+  "avx": false,
+  "neon": true,
+  "note": "Illustrative fixture for demos; not a measured machine."
+}
+

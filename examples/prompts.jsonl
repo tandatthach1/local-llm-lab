@@ -1,0 +1,4 @@
+{"name":"short_prompt","prompt":"Explain KV cache memory in two paragraphs."}
+{"name":"long_context","prompt":"Summarize a long technical document while preserving deployment constraints."}
+{"name":"stress_prompt","prompt":"You are running locally while a 3D render is active. Explain how to reduce latency."}
+

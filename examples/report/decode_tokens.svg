@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="860" height="360" viewBox="0 0 860 360">
+<rect width="100%" height="100%" fill="#ffffff"/>
+<text x="20" y="30" font-size="20" font-weight="700">Decode throughput</text>
+<text x="12" y="78.5" font-size="14">short_prompt</text><rect x="160" y="54.0" width="99.0" height="34.0" rx="4" fill="#2563eb"/><text x="267.0" y="78.5" font-size="13">0.15 tok/s</text>
+<text x="12" y="146.0" font-size="14">long_context</text><rect x="160" y="121.5" width="59.4" height="34.0" rx="4" fill="#2563eb"/><text x="227.4" y="146.0" font-size="13">0.09 tok/s</text>
+<text x="12" y="213.5" font-size="14">prefill_heavy</text><rect x="160" y="189.0" width="39.6" height="34.0" rx="4" fill="#2563eb"/><text x="207.6" y="213.5" font-size="13">0.06 tok/s</text>
+<text x="12" y="281.0" font-size="14">concurrent_4</text><rect x="160" y="256.5" width="52.8" height="34.0" rx="4" fill="#2563eb"/><text x="220.8" y="281.0" font-size="13">0.08 tok/s</text>
+<line x1="160" y1="306" x2="828" y2="306" stroke="#94a3b8"/>
+</svg>

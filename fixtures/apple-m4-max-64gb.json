@@ -1,0 +1,18 @@
+{
+  "name": "Mock Apple Silicon Max-class 64GB",
+  "os": "macOS",
+  "arch": "arm64",
+  "cpu": "Apple Silicon Max-class",
+  "gpu": "Integrated Apple GPU",
+  "unified_memory": true,
+  "memory_total_gib": 64.0,
+  "memory_available_gib": 51.0,
+  "disk_available_gib": 900.0,
+  "memory_bandwidth_gbps": 410.0,
+  "metal": true,
+  "cuda": false,
+  "avx": false,
+  "neon": true,
+  "note": "Illustrative fixture for demos; not a measured machine."
+}
+

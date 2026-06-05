@@ -1,0 +1,199 @@
+{
+  "bench": {
+    "backend": "llama.cpp",
+    "kind": "mock",
+    "model": "custom-600b",
+    "notes": [
+      "Mock benchmark: deterministic demo data, not measured backend performance."
+    ],
+    "scenarios": [
+      {
+        "concurrency": 1,
+        "decode_tokens_s": 0.15,
+        "estimated_power_w": 53.5,
+        "name": "short_prompt",
+        "output_tokens": 128,
+        "p50_latency_s": 1019.18,
+        "p95_latency_s": 1292.83,
+        "peak_memory_gib": 378.96,
+        "prefill_tokens_s": 1.45,
+        "prompt_tokens": 256,
+        "temperature_c": 70.8
+      },
+      {
+        "concurrency": 1,
+        "decode_tokens_s": 0.09,
+        "estimated_power_w": 50.6,
+        "name": "long_context",
+        "output_tokens": 256,
+        "p50_latency_s": 14220.54,
+        "p95_latency_s": 18534.21,
+        "peak_memory_gib": 363.72,
+        "prefill_tokens_s": 0.72,
+        "prompt_tokens": 8192,
+        "temperature_c": 74.8
+      },
+      {
+        "concurrency": 1,
+        "decode_tokens_s": 0.06,
+        "estimated_power_w": 60.1,
+        "name": "prefill_heavy",
+        "output_tokens": 128,
+        "p50_latency_s": 46008.95,
+        "p95_latency_s": 71170.62,
+        "peak_memory_gib": 363.05,
+        "prefill_tokens_s": 0.75,
+        "prompt_tokens": 32768,
+        "temperature_c": 62.3
+      },
+      {
+        "concurrency": 4,
+        "decode_tokens_s": 0.08,
+        "estimated_power_w": 53.3,
+        "name": "concurrent_4",
+        "output_tokens": 128,
+        "p50_latency_s": 3774.77,
+        "p95_latency_s": 4736.42,
+        "peak_memory_gib": 374.37,
+        "prefill_tokens_s": 0.98,
+        "prompt_tokens": 2048,
+        "temperature_c": 69.6
+      }
+    ]
+  },
+  "plan": {
+    "confidence": "demo",
+    "downgrade_options": [
+      "No supported quantization fits safely at this context on this hardware.",
+      "Consider remote inference, hybrid/offloaded inference, or a smaller distilled model.",
+      "For 600B+ models, avoid local-only deployment unless you have measured headroom."
+    ],
+    "expected_decode_tokens_s": {
+      "high": 0.38,
+      "low": 0.18,
+      "mid": 0.28
+    },
+    "formulas": {
+      "kv_cache": "ctx * concurrency * layers * kv_heads * head_dim * 2(K,V) * kv_dtype_bytes",
+      "runtime_required": "weights + kv_cache + activation + backend_overhead",
+      "total_required": "runtime_required + os_reserve",
+      "weights": "params * quant_effective_bytes_per_param * format_overhead"
+    },
+    "inputs": {
+      "backend": "llama.cpp",
+      "concurrency": 1,
+      "context_tokens": 32768,
+      "hardware": {
+        "arch": "arm64",
+        "avx": false,
+        "backends": {},
+        "cpu": "Apple Silicon Max-class",
+        "cuda": false,
+        "disk_available_gib": 1800.0,
+        "gpu": "Integrated Apple GPU",
+        "memory_available_gib": 110.0,
+        "memory_bandwidth_gbps": 546.0,
+        "memory_total_gib": 128.0,
+        "metal": true,
+        "name": "Mock Apple Silicon Max-class 128GB",
+        "neon": true,
+        "note": "Illustrative fixture for demos; not a measured machine.",
+        "os": "macOS",
+        "probes": {},
+        "unified_memory": true,
+        "vram_total_gib": null
+      },
+      "kv_dtype_bytes": 2.0,
+      "model": {
+        "active_params_b": null,
+        "architecture": "dense",
+        "confidence": "low",
+        "default_format": "gguf",
+        "family": "Custom",
+        "head_dim": 128,
+        "heads": 160,
+        "id": "custom-600b",
+        "kv_heads": 16,
+        "layers": 128,
+        "note": "Generic profile inferred from parameter count; override architecture fields when known.",
+        "params_b": 600.0
+      },
+      "model_format": "gguf",
+      "quant": {
+        "bits": 4,
+        "bytes_per_param": 0.56,
+        "name": "Q4_K_M",
+        "quality_note": "Common default for local GGUF deployments."
+      }
+    },
+    "memory": {
+      "activation_gib": 6.01,
+      "available_runtime_gib": 110.0,
+      "backend_overhead_gib": 13.39,
+      "kv_cache_gib": 32.0,
+      "margin_gib": -266.84,
+      "os_reserve_gib": 17.92,
+      "runtime_required_gib": 376.84,
+      "total_required_gib": 394.76,
+      "weights_gib": 325.44
+    },
+    "recommended_backend": "llama.cpp",
+    "recommended_quantization": "no-safe-local-quant",
+    "risk_level": "extreme",
+    "verdict": "does-not-fit",
+    "warnings": [
+      "Model metadata confidence is low; override layers/heads/KV heads/head dim if known.",
+      "Illustrative fixture for demos; not a measured machine.",
+      "Estimated runtime exceeds available runtime memory by 267 GiB.",
+      "Long context can dominate KV cache and prefill time."
+    ]
+  },
+  "stress": {
+    "kind": "mock",
+    "notes": [
+      "Stress data is a reproducible simulation. Real Blender/GPU stress is opt-in for future versions."
+    ],
+    "scenarios": [
+      {
+        "decode_tokens_s": 0.15,
+        "extra_memory_gib": 0.0,
+        "memory_pressure_ratio": 2.0,
+        "name": "llm_only",
+        "p95_latency_multiplier": 1.37,
+        "simulated_gpu_load": 0.0,
+        "stability": "unstable",
+        "throughput_drop_pct": 1.1
+      },
+      {
+        "decode_tokens_s": 0.11,
+        "extra_memory_gib": 4.0,
+        "memory_pressure_ratio": 2.0,
+        "name": "llm_plus_viewport_render",
+        "p95_latency_multiplier": 1.68,
+        "simulated_gpu_load": 0.35,
+        "stability": "unstable",
+        "throughput_drop_pct": 28.9
+      },
+      {
+        "decode_tokens_s": 0.07,
+        "extra_memory_gib": 10.0,
+        "memory_pressure_ratio": 2.0,
+        "name": "llm_plus_blender_preview",
+        "p95_latency_multiplier": 2.37,
+        "simulated_gpu_load": 0.65,
+        "stability": "unstable",
+        "throughput_drop_pct": 55.7
+      },
+      {
+        "decode_tokens_s": 0.05,
+        "extra_memory_gib": 18.0,
+        "memory_pressure_ratio": 2.0,
+        "name": "llm_plus_gpu_pressure",
+        "p95_latency_multiplier": 2.98,
+        "simulated_gpu_load": 0.85,
+        "stability": "unstable",
+        "throughput_drop_pct": 66.9
+      }
+    ]
+  }
+}

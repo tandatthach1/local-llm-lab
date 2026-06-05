@@ -1,0 +1,19 @@
+{
+  "name": "Mock Linux + dual H100 160GB VRAM",
+  "os": "Linux",
+  "arch": "x86_64",
+  "cpu": "Server x86_64",
+  "gpu": "2x NVIDIA H100 80GB",
+  "unified_memory": false,
+  "memory_total_gib": 512.0,
+  "memory_available_gib": 440.0,
+  "vram_total_gib": 160.0,
+  "disk_available_gib": 8000.0,
+  "memory_bandwidth_gbps": 3200.0,
+  "metal": false,
+  "cuda": true,
+  "avx": true,
+  "neon": false,
+  "note": "Illustrative future-path fixture; not a measured machine."
+}
+

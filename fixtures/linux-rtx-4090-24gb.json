@@ -1,0 +1,19 @@
+{
+  "name": "Mock Linux + RTX 4090 24GB",
+  "os": "Linux",
+  "arch": "x86_64",
+  "cpu": "High-end desktop x86_64",
+  "gpu": "NVIDIA RTX 4090",
+  "unified_memory": false,
+  "memory_total_gib": 128.0,
+  "memory_available_gib": 100.0,
+  "vram_total_gib": 24.0,
+  "disk_available_gib": 1800.0,
+  "memory_bandwidth_gbps": 1000.0,
+  "metal": false,
+  "cuda": true,
+  "avx": true,
+  "neon": false,
+  "note": "Illustrative future-path fixture; not a measured machine."
+}
+
