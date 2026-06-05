@@ -49,6 +49,10 @@ class WorkflowTest(unittest.TestCase):
             self.assertTrue((out / "report.json").exists())
             self.assertTrue((out / "index.html").exists())
             self.assertTrue((out / "decode_tokens.svg").exists())
+            html = (out / "index.html").read_text(encoding="utf-8")
+            self.assertIn("local-llm-lab report", html)
+            self.assertIn("Markdown Export", html)
+            self.assertIn("Stress Simulation", html)
             self.assertIn(str(out / "index.html"), result["files"])
 
     def test_fixture_detection_has_no_sensitive_identifiers(self) -> None:
@@ -62,4 +66,3 @@ class WorkflowTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-

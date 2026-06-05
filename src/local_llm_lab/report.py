@@ -112,11 +112,94 @@ def _markdown(data: dict[str, Any]) -> str:
     return "\n".join(lines)
 
 
-def _html_doc(markdown: str, svg_files: list[str]) -> str:
+def _badge_class(value: str) -> str:
+    return {
+        "smooth": "ok",
+        "tight": "warn",
+        "not-recommended": "bad",
+        "does-not-fit": "fail",
+        "ok": "ok",
+        "watch": "warn",
+        "unstable": "fail",
+    }.get(value, "neutral")
+
+
+def _cell(value: object) -> str:
+    return html.escape(str(value if value is not None else ""))
+
+
+def _metric(label: str, value: object, suffix: str = "") -> str:
+    return (
+        '<div class="metric">'
+        f'<span class="metric-label">{html.escape(label)}</span>'
+        f'<strong>{_cell(value)}{html.escape(suffix)}</strong>'
+        "</div>"
+    )
+
+
+def _benchmark_table(rows: list[dict[str, Any]]) -> str:
+    if not rows:
+        return ""
+    body = "\n".join(
+        "<tr>"
+        f"<td>{_cell(row.get('name'))}</td>"
+        f"<td>{_cell(row.get('decode_tokens_s'))}</td>"
+        f"<td>{_cell(row.get('prefill_tokens_s'))}</td>"
+        f"<td>{_cell(row.get('p95_latency_s'))}</td>"
+        f"<td>{_cell(row.get('peak_memory_gib'))}</td>"
+        "</tr>"
+        for row in rows
+    )
+    return (
+        '<section class="section"><h2>Benchmark</h2><table>'
+        "<thead><tr><th>Scenario</th><th>Decode tok/s</th><th>Prefill tok/s</th><th>P95 latency s</th><th>Peak GiB</th></tr></thead>"
+        f"<tbody>{body}</tbody></table></section>"
+    )
+
+
+def _stress_table(rows: list[dict[str, Any]]) -> str:
+    if not rows:
+        return ""
+    body = "\n".join(
+        "<tr>"
+        f"<td>{_cell(row.get('name'))}</td>"
+        f"<td>{_cell(row.get('throughput_drop_pct'))}</td>"
+        f"<td>{_cell(row.get('memory_pressure_ratio'))}</td>"
+        f"<td><span class=\"badge {_badge_class(str(row.get('stability')))}\">{_cell(row.get('stability'))}</span></td>"
+        "</tr>"
+        for row in rows
+    )
+    return (
+        '<section class="section"><h2>Stress Simulation</h2><table>'
+        "<thead><tr><th>Scenario</th><th>Drop %</th><th>Pressure</th><th>Stability</th></tr></thead>"
+        f"<tbody>{body}</tbody></table></section>"
+    )
+
+
+def _list_section(title: str, items: list[str]) -> str:
+    if not items:
+        return ""
+    body = "".join(f"<li>{html.escape(item)}</li>" for item in items)
+    return f'<section class="section"><h2>{html.escape(title)}</h2><ul>{body}</ul></section>'
+
+
+def _html_doc(data: dict[str, Any], markdown: str, svg_files: list[str]) -> str:
     escaped = html.escape(markdown)
-    sections = []
+    plan = data.get("plan", {})
+    inputs = plan.get("inputs", {})
+    model = inputs.get("model", {})
+    hardware = inputs.get("hardware", {})
+    memory = plan.get("memory", {})
+    tokens = plan.get("expected_decode_tokens_s", {})
+    verdict = str(plan.get("verdict", "unknown"))
+    risk = str(plan.get("risk_level", "unknown"))
+    charts = []
     for svg in svg_files:
-        sections.append(f'<section><img src="{html.escape(svg)}" alt="{html.escape(svg)}"></section>')
+        charts.append(f'<img src="{html.escape(svg)}" alt="{html.escape(svg)}">')
+    benchmark = _benchmark_table(data.get("bench", {}).get("scenarios", []))
+    stress = _stress_table(data.get("stress", {}).get("scenarios", []))
+    warnings = _list_section("Warnings", plan.get("warnings", []))
+    downgrades = _list_section("Downgrade Options", plan.get("downgrade_options", []))
     return f"""<!doctype html>
 <html lang="en">
 <head>
@@ -125,18 +208,62 @@ def _html_doc(markdown: str, svg_files: list[str]) -> str:
   <title>local-llm-lab report</title>
   <style>
     :root {{ color-scheme: light; font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }}
-    body {{ margin: 0; background: #f8fafc; color: #0f172a; }}
-    main {{ max-width: 1040px; margin: 0 auto; padding: 32px 20px 56px; }}
-    h1 {{ font-size: 34px; margin: 0 0 10px; }}
-    pre {{ white-space: pre-wrap; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 20px; line-height: 1.55; }}
-    img {{ max-width: 100%; background: white; border: 1px solid #e2e8f0; border-radius: 8px; margin: 18px 0; }}
+    body {{ margin: 0; background: #f7f8fb; color: #111827; }}
+    main {{ max-width: 1180px; margin: 0 auto; padding: 28px 20px 56px; }}
+    h1 {{ font-size: 34px; line-height: 1.1; margin: 0 0 8px; letter-spacing: 0; }}
+    h2 {{ font-size: 18px; margin: 0 0 12px; letter-spacing: 0; }}
+    .subtle {{ color: #5b6472; margin: 0; }}
+    .hero {{ border: 1px solid #d9dee8; background: #fff; border-radius: 8px; padding: 20px; margin: 20px 0; }}
+    .hero-top {{ display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 18px; }}
+    .grid {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(158px, 1fr)); gap: 12px; }}
+    .metric {{ border: 1px solid #e1e6ef; border-radius: 8px; padding: 13px 14px; background: #fff; min-height: 68px; }}
+    .metric-label {{ display: block; color: #667085; font-size: 12px; text-transform: uppercase; letter-spacing: 0; }}
+    .metric strong {{ display: block; font-size: 22px; line-height: 1.15; margin-top: 6px; overflow-wrap: anywhere; }}
+    .badge {{ display: inline-block; border-radius: 999px; padding: 4px 10px; font-size: 12px; font-weight: 700; letter-spacing: 0; }}
+    .ok {{ color: #065f46; background: #d1fae5; }}
+    .warn {{ color: #92400e; background: #fef3c7; }}
+    .bad {{ color: #991b1b; background: #fee2e2; }}
+    .fail {{ color: #7f1d1d; background: #fecaca; }}
+    .neutral {{ color: #334155; background: #e2e8f0; }}
+    .section {{ margin-top: 22px; }}
+    table {{ width: 100%; border-collapse: collapse; background: #fff; border: 1px solid #d9dee8; border-radius: 8px; overflow: hidden; }}
+    th, td {{ padding: 10px 12px; border-bottom: 1px solid #eef1f6; text-align: left; font-size: 14px; }}
+    th {{ background: #f1f4f9; color: #344054; font-size: 12px; text-transform: uppercase; letter-spacing: 0; }}
+    img {{ max-width: 100%; background: white; border: 1px solid #d9dee8; border-radius: 8px; margin: 10px 0; }}
+    ul {{ margin: 0; padding-left: 20px; }}
+    li {{ margin: 6px 0; }}
+    pre {{ white-space: pre-wrap; background: #ffffff; border: 1px solid #d9dee8; border-radius: 8px; padding: 18px; line-height: 1.55; overflow-x: auto; }}
   </style>
 </head>
 <body>
 <main>
   <h1>local-llm-lab report</h1>
-  {''.join(sections)}
-  <pre>{escaped}</pre>
+  <p class="subtle">A transparent estimate of local model fit, throughput, and stress behavior.</p>
+  <section class="hero">
+    <div class="hero-top">
+      <div>
+        <h2>{_cell(model.get("id", "unknown"))} on {_cell(hardware.get("name", "unknown"))}</h2>
+        <p class="subtle">Backend {_cell(plan.get("recommended_backend", "unknown"))} · quant {_cell(inputs.get("quant", {}).get("name", "unknown"))} · context {_cell(inputs.get("context_tokens", "unknown"))}</p>
+      </div>
+      <span class="badge {_badge_class(verdict)}">{html.escape(verdict)}</span>
+    </div>
+    <div class="grid">
+      {_metric("Risk", risk)}
+      {_metric("Weights", memory.get("weights_gib", "?"), " GiB")}
+      {_metric("KV cache", memory.get("kv_cache_gib", "?"), " GiB")}
+      {_metric("Runtime", memory.get("runtime_required_gib", "?"), " GiB")}
+      {_metric("Available", memory.get("available_runtime_gib", "?"), " GiB")}
+      {_metric("Margin", memory.get("margin_gib", "?"), " GiB")}
+      {_metric("Decode mid", tokens.get("mid", "?"), " tok/s")}
+      {_metric("Confidence", plan.get("confidence", "unknown"))}
+    </div>
+  </section>
+  <section class="section">{''.join(charts)}</section>
+  {benchmark}
+  {stress}
+  {downgrades}
+  {warnings}
+  <section class="section"><h2>Markdown Export</h2><pre>{escaped}</pre></section>
 </main>
 </body>
 </html>
@@ -192,7 +319,7 @@ def generate_report(input_path: str | Path, out_dir: str | Path) -> dict[str, An
         _matplotlib_chart(stress_items, target / "stress_drop.png", "Stress throughput drop")
 
     html_path = target / "index.html"
-    html_path.write_text(_html_doc(md, svg_files), encoding="utf-8")
+    html_path.write_text(_html_doc(source, md, svg_files), encoding="utf-8")
     source_copy = target / "source-input.json"
     if Path(input_path) != source_copy:
         try:
@@ -204,4 +331,3 @@ def generate_report(input_path: str | Path, out_dir: str | Path) -> dict[str, An
         "out_dir": str(target),
         "files": [str(path) for path in sorted(target.iterdir()) if path.is_file()],
     }
-

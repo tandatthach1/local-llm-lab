@@ -2,10 +2,19 @@ from __future__ import annotations
 
 import argparse
 import json
-import tempfile
 from pathlib import Path
 
 from .bench import mock_benchmark, save_bench, tiny_local_benchmark
+from .compare import (
+    DEFAULT_COMPARE_BACKENDS,
+    DEFAULT_COMPARE_CONTEXTS,
+    DEFAULT_COMPARE_QUANTS,
+    CompareRequest,
+    compare_plans,
+    parse_csv,
+    parse_int_csv,
+    write_compare_outputs,
+)
 from .deploy import generate_deploy_files
 from .fixtures import list_fixture_names
 from .hardware import detect_hardware
@@ -157,6 +166,49 @@ def cmd_report(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_compare(args: argparse.Namespace) -> int:
+    if not args.model and not args.params:
+        raise SystemExit("Either --model or --params is required.")
+    hardware_fixture = args.hardware.removeprefix("fixture:") if args.hardware else None
+    request = CompareRequest(
+        model_name=args.model,
+        params=args.params,
+        quantizations=parse_csv(args.quants, DEFAULT_COMPARE_QUANTS),
+        contexts=parse_int_csv(args.contexts, DEFAULT_COMPARE_CONTEXTS),
+        backends=parse_csv(args.backends, DEFAULT_COMPARE_BACKENDS),
+        concurrency=args.concurrency,
+        model_format=args.format,
+        hardware_fixture=hardware_fixture,
+        layers=args.layers,
+        heads=args.heads,
+        kv_heads=args.kv_heads,
+        head_dim=args.head_dim,
+        kv_dtype_bytes=args.kv_dtype_bytes,
+    )
+    result = compare_plans(request)
+    if args.out:
+        written = write_compare_outputs(result, args.out)
+    else:
+        written = None
+
+    if args.json:
+        print_json(result if not written else {"compare": result["compare"], "outputs": written})
+    else:
+        summary = result["compare"]["summary"]
+        best = summary["best"]
+        print("Best candidate:")
+        print(f"- backend: {best['backend']}")
+        print(f"- quantization: {best['quantization']}")
+        print(f"- context: {best['context_tokens']} tokens")
+        print(f"- verdict: {best['verdict']} risk={best['risk_level']}")
+        print(f"- margin: {best['margin_gib']} GiB")
+        print(f"- estimated decode: {best['decode_tokens_s_mid']} tok/s")
+        print(f"Compared {summary['total_plans']} plans; runnable={summary['runnable_plans']}.")
+        if written:
+            print(f"Compare report generated in {written['out_dir']}")
+    return 0
+
+
 def cmd_demo(args: argparse.Namespace) -> int:
     out_dir = Path(args.out)
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -239,6 +291,25 @@ def build_parser() -> argparse.ArgumentParser:
     report.add_argument("--port", type=int, default=8787)
     report.set_defaults(func=cmd_report)
 
+    compare = sub.add_parser("compare", help="Compare quantization/context/backend planning tradeoffs.")
+    group = compare.add_mutually_exclusive_group(required=False)
+    group.add_argument("--model", help="Curated model preset, e.g. llama-3.3-70b")
+    group.add_argument("--params", help="Free-form parameter count, e.g. 70B, 120B, 600B")
+    compare.add_argument("--quants", default=None, help="Comma-separated quantizations. Default: Q8_0,Q6_K,Q5_K_M,Q4_K_M,Q3_K_M,IQ2_XS")
+    compare.add_argument("--contexts", default=None, help="Comma-separated context lengths. Default: 4096,8192,16384,32768")
+    compare.add_argument("--backends", default=None, help="Comma-separated backends. Default: auto")
+    compare.add_argument("--concurrency", type=int, default=1)
+    compare.add_argument("--format", default=None)
+    compare.add_argument("--hardware", default=None, help="Use fixture:name, e.g. fixture:apple-m4-max-128gb")
+    compare.add_argument("--layers", type=int, default=None)
+    compare.add_argument("--heads", type=int, default=None)
+    compare.add_argument("--kv-heads", type=int, default=None)
+    compare.add_argument("--head-dim", type=int, default=None)
+    compare.add_argument("--kv-dtype-bytes", type=float, default=2.0)
+    compare.add_argument("--out", help="Write compare.json, compare.md, charts, and index.html")
+    compare.add_argument("--json", action="store_true")
+    compare.set_defaults(func=cmd_compare)
+
     serve = sub.add_parser("serve", help="Serve a generated report directory on localhost.")
     serve.add_argument("--dir", required=True)
     serve.add_argument("--port", type=int, default=8787)
@@ -263,4 +334,3 @@ def main(argv: list[str] | None = None) -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-

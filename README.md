@@ -121,6 +121,28 @@ python3 -m local_llm_lab plan \
   --ctx 16384
 ```
 
+### compare
+
+Compare quantization, context length, and backend tradeoffs in one run:
+
+```bash
+python3 -m local_llm_lab compare \
+  --model llama-3.3-70b \
+  --quants Q6_K,Q5_K_M,Q4_K_M,Q3_K_M \
+  --contexts 4096,8192,16384,32768 \
+  --hardware fixture:apple-m4-max-128gb \
+  --out sample_reports/compare-llama70b
+```
+
+This writes:
+
+- `compare.json`
+- `compare.md`
+- `index.html`
+- SVG charts for decode throughput and positive memory margin
+
+Use it before `deploy` when you want the best safe compromise instead of testing one setting at a time.
+
 ### deploy
 
 ```bash
@@ -213,9 +235,10 @@ These are estimates. Backend kernels, model architecture, tokenizer behavior, pr
 v0.1:
 
 - Honest planning for `--model` and `--params`
+- Compare matrices for quantization/context/backend tradeoffs
 - Dry-run deploy generation for llama.cpp, MLX, Ollama
 - Mock bench/stress data
-- Markdown/JSON/SVG/HTML reports
+- Structured Markdown/JSON/SVG/HTML reports
 - Local report server
 
 v0.2:

@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="860" height="360" viewBox="0 0 860 360">
+<rect width="100%" height="100%" fill="#ffffff"/>
+<text x="20" y="30" font-size="20" font-weight="700">Estimated decode throughput</text>
+<text x="12" y="64.4" font-size="14">Q6_K 32768</text><rect x="160" y="54.0" width="462.1" height="14.4" rx="4" fill="#2563eb"/><text x="630.1" y="64.4" font-size="13">6.70 tok/s</text>
+<text x="12" y="86.9" font-size="14">Q6_K 16384</text><rect x="160" y="76.5" width="462.1" height="14.4" rx="4" fill="#2563eb"/><text x="630.1" y="86.9" font-size="13">6.70 tok/s</text>
+<text x="12" y="109.4" font-size="14">Q6_K 8192</text><rect x="160" y="99.0" width="462.1" height="14.4" rx="4" fill="#2563eb"/><text x="630.1" y="109.4" font-size="13">6.70 tok/s</text>
+<text x="12" y="131.9" font-size="14">Q6_K 4096</text><rect x="160" y="121.5" width="462.1" height="14.4" rx="4" fill="#2563eb"/><text x="630.1" y="131.9" font-size="13">6.70 tok/s</text>
+<text x="12" y="154.4" font-size="14">Q5_K_M 32768</text><rect x="160" y="144.0" width="543.4" height="14.4" rx="4" fill="#2563eb"/><text x="711.4" y="154.4" font-size="13">7.88 tok/s</text>
+<text x="12" y="176.9" font-size="14">Q5_K_M 16384</text><rect x="160" y="166.5" width="543.4" height="14.4" rx="4" fill="#2563eb"/><text x="711.4" y="176.9" font-size="13">7.88 tok/s</text>
+<text x="12" y="199.4" font-size="14">Q5_K_M 8192</text><rect x="160" y="189.0" width="543.4" height="14.4" rx="4" fill="#2563eb"/><text x="711.4" y="199.4" font-size="13">7.88 tok/s</text>
+<text x="12" y="221.9" font-size="14">Q5_K_M 4096</text><rect x="160" y="211.5" width="543.4" height="14.4" rx="4" fill="#2563eb"/><text x="711.4" y="221.9" font-size="13">7.88 tok/s</text>
+<text x="12" y="244.4" font-size="14">Q4_K_M 32768</text><rect x="160" y="234.0" width="660.0" height="14.4" rx="4" fill="#2563eb"/><text x="828.0" y="244.4" font-size="13">9.57 tok/s</text>
+<text x="12" y="266.9" font-size="14">Q4_K_M 16384</text><rect x="160" y="256.5" width="660.0" height="14.4" rx="4" fill="#2563eb"/><text x="828.0" y="266.9" font-size="13">9.57 tok/s</text>
+<text x="12" y="289.4" font-size="14">Q4_K_M 8192</text><rect x="160" y="279.0" width="660.0" height="14.4" rx="4" fill="#2563eb"/><text x="828.0" y="289.4" font-size="13">9.57 tok/s</text>
+<text x="12" y="311.9" font-size="14">Q4_K_M 4096</text><rect x="160" y="301.5" width="660.0" height="14.4" rx="4" fill="#2563eb"/><text x="828.0" y="311.9" font-size="13">9.57 tok/s</text>
+<line x1="160" y1="306" x2="828" y2="306" stroke="#94a3b8"/>
+</svg>

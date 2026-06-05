@@ -6,18 +6,68 @@
   <title>local-llm-lab report</title>
   <style>
     :root { color-scheme: light; font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
-    body { margin: 0; background: #f8fafc; color: #0f172a; }
-    main { max-width: 1040px; margin: 0 auto; padding: 32px 20px 56px; }
-    h1 { font-size: 34px; margin: 0 0 10px; }
-    pre { white-space: pre-wrap; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 20px; line-height: 1.55; }
-    img { max-width: 100%; background: white; border: 1px solid #e2e8f0; border-radius: 8px; margin: 18px 0; }
+    body { margin: 0; background: #f7f8fb; color: #111827; }
+    main { max-width: 1180px; margin: 0 auto; padding: 28px 20px 56px; }
+    h1 { font-size: 34px; line-height: 1.1; margin: 0 0 8px; letter-spacing: 0; }
+    h2 { font-size: 18px; margin: 0 0 12px; letter-spacing: 0; }
+    .subtle { color: #5b6472; margin: 0; }
+    .hero { border: 1px solid #d9dee8; background: #fff; border-radius: 8px; padding: 20px; margin: 20px 0; }
+    .hero-top { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 18px; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(158px, 1fr)); gap: 12px; }
+    .metric { border: 1px solid #e1e6ef; border-radius: 8px; padding: 13px 14px; background: #fff; min-height: 68px; }
+    .metric-label { display: block; color: #667085; font-size: 12px; text-transform: uppercase; letter-spacing: 0; }
+    .metric strong { display: block; font-size: 22px; line-height: 1.15; margin-top: 6px; overflow-wrap: anywhere; }
+    .badge { display: inline-block; border-radius: 999px; padding: 4px 10px; font-size: 12px; font-weight: 700; letter-spacing: 0; }
+    .ok { color: #065f46; background: #d1fae5; }
+    .warn { color: #92400e; background: #fef3c7; }
+    .bad { color: #991b1b; background: #fee2e2; }
+    .fail { color: #7f1d1d; background: #fecaca; }
+    .neutral { color: #334155; background: #e2e8f0; }
+    .section { margin-top: 22px; }
+    table { width: 100%; border-collapse: collapse; background: #fff; border: 1px solid #d9dee8; border-radius: 8px; overflow: hidden; }
+    th, td { padding: 10px 12px; border-bottom: 1px solid #eef1f6; text-align: left; font-size: 14px; }
+    th { background: #f1f4f9; color: #344054; font-size: 12px; text-transform: uppercase; letter-spacing: 0; }
+    img { max-width: 100%; background: white; border: 1px solid #d9dee8; border-radius: 8px; margin: 10px 0; }
+    ul { margin: 0; padding-left: 20px; }
+    li { margin: 6px 0; }
+    pre { white-space: pre-wrap; background: #ffffff; border: 1px solid #d9dee8; border-radius: 8px; padding: 18px; line-height: 1.55; overflow-x: auto; }
   </style>
 </head>
 <body>
 <main>
   <h1>local-llm-lab report</h1>
-  <section><img src="decode_tokens.svg" alt="decode_tokens.svg"></section><section><img src="stress_drop.svg" alt="stress_drop.svg"></section>
-  <pre># local-llm-lab Report
+  <p class="subtle">A transparent estimate of local model fit, throughput, and stress behavior.</p>
+  <section class="hero">
+    <div class="hero-top">
+      <div>
+        <h2>custom-600b on Mock Apple Silicon Max-class 128GB</h2>
+        <p class="subtle">Backend llama.cpp · quant Q4_K_M · context 32768</p>
+      </div>
+      <span class="badge fail">does-not-fit</span>
+    </div>
+    <div class="grid">
+      <div class="metric"><span class="metric-label">Risk</span><strong>extreme</strong></div>
+      <div class="metric"><span class="metric-label">Weights</span><strong>325.44 GiB</strong></div>
+      <div class="metric"><span class="metric-label">KV cache</span><strong>32.0 GiB</strong></div>
+      <div class="metric"><span class="metric-label">Runtime</span><strong>376.84 GiB</strong></div>
+      <div class="metric"><span class="metric-label">Available</span><strong>110.0 GiB</strong></div>
+      <div class="metric"><span class="metric-label">Margin</span><strong>-266.84 GiB</strong></div>
+      <div class="metric"><span class="metric-label">Decode mid</span><strong>0.28 tok/s</strong></div>
+      <div class="metric"><span class="metric-label">Confidence</span><strong>demo</strong></div>
+    </div>
+  </section>
+  <section class="section"><img src="decode_tokens.svg" alt="decode_tokens.svg"><img src="stress_drop.svg" alt="stress_drop.svg"></section>
+  <section class="section"><h2>Benchmark</h2><table><thead><tr><th>Scenario</th><th>Decode tok/s</th><th>Prefill tok/s</th><th>P95 latency s</th><th>Peak GiB</th></tr></thead><tbody><tr><td>short_prompt</td><td>0.15</td><td>1.45</td><td>1292.83</td><td>378.96</td></tr>
+<tr><td>long_context</td><td>0.09</td><td>0.72</td><td>18534.21</td><td>363.72</td></tr>
+<tr><td>prefill_heavy</td><td>0.06</td><td>0.75</td><td>71170.62</td><td>363.05</td></tr>
+<tr><td>concurrent_4</td><td>0.08</td><td>0.98</td><td>4736.42</td><td>374.37</td></tr></tbody></table></section>
+  <section class="section"><h2>Stress Simulation</h2><table><thead><tr><th>Scenario</th><th>Drop %</th><th>Pressure</th><th>Stability</th></tr></thead><tbody><tr><td>llm_only</td><td>1.1</td><td>2.0</td><td><span class="badge fail">unstable</span></td></tr>
+<tr><td>llm_plus_viewport_render</td><td>28.9</td><td>2.0</td><td><span class="badge fail">unstable</span></td></tr>
+<tr><td>llm_plus_blender_preview</td><td>55.7</td><td>2.0</td><td><span class="badge fail">unstable</span></td></tr>
+<tr><td>llm_plus_gpu_pressure</td><td>66.9</td><td>2.0</td><td><span class="badge fail">unstable</span></td></tr></tbody></table></section>
+  <section class="section"><h2>Downgrade Options</h2><ul><li>No supported quantization fits safely at this context on this hardware.</li><li>Consider remote inference, hybrid/offloaded inference, or a smaller distilled model.</li><li>For 600B+ models, avoid local-only deployment unless you have measured headroom.</li></ul></section>
+  <section class="section"><h2>Warnings</h2><ul><li>Model metadata confidence is low; override layers/heads/KV heads/head dim if known.</li><li>Illustrative fixture for demos; not a measured machine.</li><li>Estimated runtime exceeds available runtime memory by 267 GiB.</li><li>Long context can dominate KV cache and prefill time.</li></ul></section>
+  <section class="section"><h2>Markdown Export</h2><pre># local-llm-lab Report
 
 ## Verdict
 
@@ -76,7 +126,7 @@
 - No supported quantization fits safely at this context on this hardware.
 - Consider remote inference, hybrid/offloaded inference, or a smaller distilled model.
 - For 600B+ models, avoid local-only deployment unless you have measured headroom.
-</pre>
+</pre></section>
 </main>
 </body>
 </html>
