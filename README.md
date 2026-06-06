@@ -35,6 +35,7 @@ It is a lightweight CLI for local LLM planning, dry-run deployment, benchmarking
 ## What it does
 
 - Detect local hardware: OS, CPU/GPU, unified memory/VRAM, disk, Metal/CUDA/AVX/NEON, backend binaries.
+- Save measured hardware profiles and reuse them in later planning runs.
 - Plan whether a model fits: weights, KV cache, overhead, OS reserve, margin, verdict, risk, backend, quantization.
 - Deploy without downloading huge models: generate llama.cpp, MLX, and Ollama dry-run scripts/configs.
 - Benchmark with deterministic mock data or tiny local smoke checks.
@@ -72,14 +73,14 @@ The core CLI has no required third-party dependencies.
 
 ## Quick demo
 
-Create demo data and a local HTML report:
+Create demo data and browse all local reports:
 
 ```bash
 python3 -m local_llm_lab demo --out examples
-python3 -m local_llm_lab serve --dir examples/report --port 8787
+python3 -m local_llm_lab serve --dir sample_reports --port 8787
 ```
 
-Then open `http://127.0.0.1:8787/`.
+Then open `http://127.0.0.1:8787/`. If the directory contains multiple report folders, `serve` opens a local Report Hub. If it points at one report folder, it serves that report directly.
 
 ## Commands
 
@@ -89,9 +90,20 @@ Then open `http://127.0.0.1:8787/`.
 python3 -m local_llm_lab detect
 python3 -m local_llm_lab detect --json --skip-probes
 python3 -m local_llm_lab detect --hardware fixture:apple-m4-ultra-256gb
+python3 -m local_llm_lab detect --save-profile my-mac
 ```
 
 Hardware detection redacts sensitive identifiers. It does not write serial numbers, hardware UUIDs, account names, tokens, or credentials.
+
+Measured profiles are saved only when you ask for it:
+
+```bash
+python3 -m local_llm_lab list profiles
+python3 -m local_llm_lab profile show my-mac --json
+python3 -m local_llm_lab plan --params 120B --quant Q4_K_M --ctx 16384 --hardware profile:my-mac
+```
+
+Profiles live under `.local-llm-lab/profiles/` by default and are ignored by Git. Backend paths are reduced to `found`/`not found` so your local username and filesystem layout are not copied into reports.
 
 ### plan
 
@@ -141,7 +153,7 @@ This writes:
 - `index.html`
 - SVG charts for decode throughput and positive memory margin
 
-Use it before `deploy` when you want the best safe compromise instead of testing one setting at a time.
+Use it before `deploy` when you want the best safe compromise instead of testing one setting at a time. The HTML report includes local-only filters, sorting, best-candidate highlighting, and copyable dry-run deploy commands.
 
 ### deploy
 
@@ -185,9 +197,10 @@ v0.1 simulates LLM inference competing with viewport rendering, Blender preview,
 ```bash
 python3 -m local_llm_lab report --input examples/demo-run.json --out sample_reports/demo
 python3 -m local_llm_lab serve --dir sample_reports/demo --port 8787
+python3 -m local_llm_lab serve --dir sample_reports --port 8787
 ```
 
-Reports include Markdown, JSON, static HTML, and SVG charts. If `matplotlib` is installed, PNG charts are added.
+Reports include Markdown, JSON, static HTML, and SVG charts. If `matplotlib` is installed, PNG charts are added. Serving a parent directory opens a local Report Hub that indexes report and compare folders without external assets or network services.
 
 ## Model presets
 

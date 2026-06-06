@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>local-llm-lab compare</title>
   <style>
-    :root { font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: #111827; background: #f7f8fb; }
+    :root { font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: #111827; background: #f6f7f9; }
     body { margin: 0; }
     main { max-width: 1180px; margin: 0 auto; padding: 28px 20px 56px; }
     h1 { margin: 0 0 6px; font-size: 34px; letter-spacing: 0; }
@@ -22,10 +22,22 @@
     .fail { color: #7f1d1d; background: #fecaca; }
     .neutral { color: #334155; background: #e2e8f0; }
     .section { margin-top: 20px; }
+    .notice { border-left: 4px solid #2563eb; background: #eff6ff; padding: 12px 14px; margin-top: 14px; color: #1e3a8a; }
+    .toolbar { display: flex; flex-wrap: wrap; gap: 10px; align-items: end; margin: 16px 0 12px; }
+    .control { display: grid; gap: 5px; }
+    .control label { color: #667085; font-size: 12px; text-transform: uppercase; }
+    select, input, button { border: 1px solid #cfd6e3; border-radius: 6px; background: #fff; color: #111827; font: inherit; padding: 8px 10px; }
+    button { cursor: pointer; }
+    button.primary { color: #fff; background: #1f2937; border-color: #1f2937; }
+    button.copy { padding: 6px 9px; font-size: 12px; }
+    code { display: block; white-space: pre-wrap; overflow-wrap: anywhere; background: #111827; color: #f9fafb; border-radius: 8px; padding: 12px; }
     table { width: 100%; border-collapse: collapse; background: #fff; border: 1px solid #d9dee8; border-radius: 8px; overflow: hidden; }
     th, td { padding: 10px 12px; border-bottom: 1px solid #eef1f6; text-align: left; font-size: 14px; }
-    th { background: #f1f4f9; color: #344054; font-size: 12px; text-transform: uppercase; letter-spacing: 0; }
+    th { background: #f1f4f9; color: #344054; font-size: 12px; text-transform: uppercase; letter-spacing: 0; cursor: pointer; }
+    tr.best-row td { background: #f8fafc; box-shadow: inset 3px 0 0 #10b981; }
+    tr[hidden] { display: none; }
     img { max-width: 100%; background: #fff; border: 1px solid #d9dee8; border-radius: 8px; margin: 10px 0; }
+    .count { color: #5b6472; margin: 8px 0; }
   </style>
 </head>
 <body>
@@ -41,30 +53,97 @@
       <div class="metric"><span class="label">Margin</span><strong>39.81 GiB</strong></div>
       <div class="metric"><span class="label">Decode</span><strong>6.7 tok/s</strong></div>
     </div>
+    <p class="notice">Best candidate is the first smooth/tight plan after risk, precision, context, speed, and memory margin sorting. Verdict counts: {&quot;smooth&quot;: 16}</p>
+    <code id="bestCommand">python3 -m local_llm_lab deploy --model llama-3.3-70b --quant Q6_K --ctx 32768 --backend llama.cpp --hardware fixture:apple-m4-max-128gb --out .local-llm-lab/deploy/llama-3.3-70b-q6_k-32768</code>
+    <button class="primary" data-copy="python3 -m local_llm_lab deploy --model llama-3.3-70b --quant Q6_K --ctx 32768 --backend llama.cpp --hardware fixture:apple-m4-max-128gb --out .local-llm-lab/deploy/llama-3.3-70b-q6_k-32768">Copy best deploy dry-run</button>
   </section>
   <section class="section"><img src="compare_decode.svg" alt="compare_decode.svg">
 <img src="compare_margin.svg" alt="compare_margin.svg"></section>
   <section class="section">
-    <table>
-      <thead><tr><th>Backend</th><th>Quant</th><th>Context</th><th>Verdict</th><th>Risk</th><th>Runtime GiB</th><th>Margin GiB</th><th>Decode tok/s</th></tr></thead>
-      <tbody><tr><td>llama.cpp</td><td>Q6_K</td><td>32768</td><td><span class="badge ok">smooth</span></td><td>low</td><td>70.19</td><td>39.81</td><td>6.7</td></tr>
-<tr><td>llama.cpp</td><td>Q6_K</td><td>16384</td><td><span class="badge ok">smooth</span></td><td>low</td><td>64.29</td><td>45.71</td><td>6.7</td></tr>
-<tr><td>llama.cpp</td><td>Q6_K</td><td>8192</td><td><span class="badge ok">smooth</span></td><td>low</td><td>61.39</td><td>48.61</td><td>6.7</td></tr>
-<tr><td>llama.cpp</td><td>Q6_K</td><td>4096</td><td><span class="badge ok">smooth</span></td><td>low</td><td>60.14</td><td>49.86</td><td>6.7</td></tr>
-<tr><td>llama.cpp</td><td>Q5_K_M</td><td>32768</td><td><span class="badge ok">smooth</span></td><td>low</td><td>61.77</td><td>48.23</td><td>7.88</td></tr>
-<tr><td>llama.cpp</td><td>Q5_K_M</td><td>16384</td><td><span class="badge ok">smooth</span></td><td>low</td><td>55.87</td><td>54.13</td><td>7.88</td></tr>
-<tr><td>llama.cpp</td><td>Q5_K_M</td><td>8192</td><td><span class="badge ok">smooth</span></td><td>low</td><td>52.97</td><td>57.03</td><td>7.88</td></tr>
-<tr><td>llama.cpp</td><td>Q5_K_M</td><td>4096</td><td><span class="badge ok">smooth</span></td><td>low</td><td>51.72</td><td>58.28</td><td>7.88</td></tr>
-<tr><td>llama.cpp</td><td>Q4_K_M</td><td>32768</td><td><span class="badge ok">smooth</span></td><td>low</td><td>53.35</td><td>56.65</td><td>9.57</td></tr>
-<tr><td>llama.cpp</td><td>Q4_K_M</td><td>16384</td><td><span class="badge ok">smooth</span></td><td>low</td><td>47.45</td><td>62.55</td><td>9.57</td></tr>
-<tr><td>llama.cpp</td><td>Q4_K_M</td><td>8192</td><td><span class="badge ok">smooth</span></td><td>low</td><td>44.55</td><td>65.45</td><td>9.57</td></tr>
-<tr><td>llama.cpp</td><td>Q4_K_M</td><td>4096</td><td><span class="badge ok">smooth</span></td><td>low</td><td>43.3</td><td>66.7</td><td>9.57</td></tr>
-<tr><td>llama.cpp</td><td>Q3_K_M</td><td>32768</td><td><span class="badge ok">smooth</span></td><td>low</td><td>44.93</td><td>65.07</td><td>12.18</td></tr>
-<tr><td>llama.cpp</td><td>Q3_K_M</td><td>16384</td><td><span class="badge ok">smooth</span></td><td>low</td><td>39.03</td><td>70.97</td><td>12.18</td></tr>
-<tr><td>llama.cpp</td><td>Q3_K_M</td><td>8192</td><td><span class="badge ok">smooth</span></td><td>low</td><td>36.13</td><td>73.87</td><td>12.18</td></tr>
-<tr><td>llama.cpp</td><td>Q3_K_M</td><td>4096</td><td><span class="badge ok">smooth</span></td><td>low</td><td>34.88</td><td>75.12</td><td>12.18</td></tr></tbody>
+    <div class="toolbar">
+      <div class="control"><label for="verdictFilter">Verdict</label><select id="verdictFilter"><option value="">All</option><option value="smooth">smooth</option><option value="tight">tight</option><option value="not-recommended">not-recommended</option><option value="does-not-fit">does-not-fit</option></select></div>
+      <div class="control"><label for="quantFilter">Quant</label><select id="quantFilter"><option value="">All</option><option value="Q3_K_M">Q3_K_M</option>
+<option value="Q4_K_M">Q4_K_M</option>
+<option value="Q5_K_M">Q5_K_M</option>
+<option value="Q6_K">Q6_K</option></select></div>
+      <div class="control"><label for="backendFilter">Backend</label><select id="backendFilter"><option value="">All</option><option value="llama.cpp">llama.cpp</option></select></div>
+      <div class="control"><label for="minMargin">Min margin GiB</label><input id="minMargin" type="number" step="1" placeholder="any"></div>
+      <button id="clearFilters">Clear</button>
+    </div>
+    <p class="count"><span id="visibleCount">16</span> of 16 plans visible. Click a column header to sort.</p>
+    <table id="matrix">
+      <thead><tr><th data-sort="backend">Backend</th><th data-sort="quant">Quant</th><th data-sort="context">Context</th><th data-sort="verdict">Verdict</th><th>Risk</th><th data-sort="runtime">Runtime GiB</th><th data-sort="margin">Margin GiB</th><th data-sort="decode">Decode tok/s</th><th>Deploy</th></tr></thead>
+      <tbody><tr class="best-row" data-backend="llama.cpp" data-quant="Q6_K" data-verdict="smooth" data-context="32768" data-margin="39.81" data-runtime="70.19" data-decode="6.7"><td>llama.cpp</td><td>Q6_K</td><td>32768</td><td><span class="badge ok">smooth</span></td><td>low</td><td>70.19</td><td>39.81</td><td>6.7</td><td><button class="copy" data-copy="python3 -m local_llm_lab deploy --model llama-3.3-70b --quant Q6_K --ctx 32768 --backend llama.cpp --hardware fixture:apple-m4-max-128gb --out .local-llm-lab/deploy/llama-3.3-70b-q6_k-32768">Copy</button></td></tr>
+<tr class="" data-backend="llama.cpp" data-quant="Q6_K" data-verdict="smooth" data-context="16384" data-margin="45.71" data-runtime="64.29" data-decode="6.7"><td>llama.cpp</td><td>Q6_K</td><td>16384</td><td><span class="badge ok">smooth</span></td><td>low</td><td>64.29</td><td>45.71</td><td>6.7</td><td><button class="copy" data-copy="python3 -m local_llm_lab deploy --model llama-3.3-70b --quant Q6_K --ctx 16384 --backend llama.cpp --hardware fixture:apple-m4-max-128gb --out .local-llm-lab/deploy/llama-3.3-70b-q6_k-16384">Copy</button></td></tr>
+<tr class="" data-backend="llama.cpp" data-quant="Q6_K" data-verdict="smooth" data-context="8192" data-margin="48.61" data-runtime="61.39" data-decode="6.7"><td>llama.cpp</td><td>Q6_K</td><td>8192</td><td><span class="badge ok">smooth</span></td><td>low</td><td>61.39</td><td>48.61</td><td>6.7</td><td><button class="copy" data-copy="python3 -m local_llm_lab deploy --model llama-3.3-70b --quant Q6_K --ctx 8192 --backend llama.cpp --hardware fixture:apple-m4-max-128gb --out .local-llm-lab/deploy/llama-3.3-70b-q6_k-8192">Copy</button></td></tr>
+<tr class="" data-backend="llama.cpp" data-quant="Q6_K" data-verdict="smooth" data-context="4096" data-margin="49.86" data-runtime="60.14" data-decode="6.7"><td>llama.cpp</td><td>Q6_K</td><td>4096</td><td><span class="badge ok">smooth</span></td><td>low</td><td>60.14</td><td>49.86</td><td>6.7</td><td><button class="copy" data-copy="python3 -m local_llm_lab deploy --model llama-3.3-70b --quant Q6_K --ctx 4096 --backend llama.cpp --hardware fixture:apple-m4-max-128gb --out .local-llm-lab/deploy/llama-3.3-70b-q6_k-4096">Copy</button></td></tr>
+<tr class="" data-backend="llama.cpp" data-quant="Q5_K_M" data-verdict="smooth" data-context="32768" data-margin="48.23" data-runtime="61.77" data-decode="7.88"><td>llama.cpp</td><td>Q5_K_M</td><td>32768</td><td><span class="badge ok">smooth</span></td><td>low</td><td>61.77</td><td>48.23</td><td>7.88</td><td><button class="copy" data-copy="python3 -m local_llm_lab deploy --model llama-3.3-70b --quant Q5_K_M --ctx 32768 --backend llama.cpp --hardware fixture:apple-m4-max-128gb --out .local-llm-lab/deploy/llama-3.3-70b-q5_k_m-32768">Copy</button></td></tr>
+<tr class="" data-backend="llama.cpp" data-quant="Q5_K_M" data-verdict="smooth" data-context="16384" data-margin="54.13" data-runtime="55.87" data-decode="7.88"><td>llama.cpp</td><td>Q5_K_M</td><td>16384</td><td><span class="badge ok">smooth</span></td><td>low</td><td>55.87</td><td>54.13</td><td>7.88</td><td><button class="copy" data-copy="python3 -m local_llm_lab deploy --model llama-3.3-70b --quant Q5_K_M --ctx 16384 --backend llama.cpp --hardware fixture:apple-m4-max-128gb --out .local-llm-lab/deploy/llama-3.3-70b-q5_k_m-16384">Copy</button></td></tr>
+<tr class="" data-backend="llama.cpp" data-quant="Q5_K_M" data-verdict="smooth" data-context="8192" data-margin="57.03" data-runtime="52.97" data-decode="7.88"><td>llama.cpp</td><td>Q5_K_M</td><td>8192</td><td><span class="badge ok">smooth</span></td><td>low</td><td>52.97</td><td>57.03</td><td>7.88</td><td><button class="copy" data-copy="python3 -m local_llm_lab deploy --model llama-3.3-70b --quant Q5_K_M --ctx 8192 --backend llama.cpp --hardware fixture:apple-m4-max-128gb --out .local-llm-lab/deploy/llama-3.3-70b-q5_k_m-8192">Copy</button></td></tr>
+<tr class="" data-backend="llama.cpp" data-quant="Q5_K_M" data-verdict="smooth" data-context="4096" data-margin="58.28" data-runtime="51.72" data-decode="7.88"><td>llama.cpp</td><td>Q5_K_M</td><td>4096</td><td><span class="badge ok">smooth</span></td><td>low</td><td>51.72</td><td>58.28</td><td>7.88</td><td><button class="copy" data-copy="python3 -m local_llm_lab deploy --model llama-3.3-70b --quant Q5_K_M --ctx 4096 --backend llama.cpp --hardware fixture:apple-m4-max-128gb --out .local-llm-lab/deploy/llama-3.3-70b-q5_k_m-4096">Copy</button></td></tr>
+<tr class="" data-backend="llama.cpp" data-quant="Q4_K_M" data-verdict="smooth" data-context="32768" data-margin="56.65" data-runtime="53.35" data-decode="9.57"><td>llama.cpp</td><td>Q4_K_M</td><td>32768</td><td><span class="badge ok">smooth</span></td><td>low</td><td>53.35</td><td>56.65</td><td>9.57</td><td><button class="copy" data-copy="python3 -m local_llm_lab deploy --model llama-3.3-70b --quant Q4_K_M --ctx 32768 --backend llama.cpp --hardware fixture:apple-m4-max-128gb --out .local-llm-lab/deploy/llama-3.3-70b-q4_k_m-32768">Copy</button></td></tr>
+<tr class="" data-backend="llama.cpp" data-quant="Q4_K_M" data-verdict="smooth" data-context="16384" data-margin="62.55" data-runtime="47.45" data-decode="9.57"><td>llama.cpp</td><td>Q4_K_M</td><td>16384</td><td><span class="badge ok">smooth</span></td><td>low</td><td>47.45</td><td>62.55</td><td>9.57</td><td><button class="copy" data-copy="python3 -m local_llm_lab deploy --model llama-3.3-70b --quant Q4_K_M --ctx 16384 --backend llama.cpp --hardware fixture:apple-m4-max-128gb --out .local-llm-lab/deploy/llama-3.3-70b-q4_k_m-16384">Copy</button></td></tr>
+<tr class="" data-backend="llama.cpp" data-quant="Q4_K_M" data-verdict="smooth" data-context="8192" data-margin="65.45" data-runtime="44.55" data-decode="9.57"><td>llama.cpp</td><td>Q4_K_M</td><td>8192</td><td><span class="badge ok">smooth</span></td><td>low</td><td>44.55</td><td>65.45</td><td>9.57</td><td><button class="copy" data-copy="python3 -m local_llm_lab deploy --model llama-3.3-70b --quant Q4_K_M --ctx 8192 --backend llama.cpp --hardware fixture:apple-m4-max-128gb --out .local-llm-lab/deploy/llama-3.3-70b-q4_k_m-8192">Copy</button></td></tr>
+<tr class="" data-backend="llama.cpp" data-quant="Q4_K_M" data-verdict="smooth" data-context="4096" data-margin="66.7" data-runtime="43.3" data-decode="9.57"><td>llama.cpp</td><td>Q4_K_M</td><td>4096</td><td><span class="badge ok">smooth</span></td><td>low</td><td>43.3</td><td>66.7</td><td>9.57</td><td><button class="copy" data-copy="python3 -m local_llm_lab deploy --model llama-3.3-70b --quant Q4_K_M --ctx 4096 --backend llama.cpp --hardware fixture:apple-m4-max-128gb --out .local-llm-lab/deploy/llama-3.3-70b-q4_k_m-4096">Copy</button></td></tr>
+<tr class="" data-backend="llama.cpp" data-quant="Q3_K_M" data-verdict="smooth" data-context="32768" data-margin="65.07" data-runtime="44.93" data-decode="12.18"><td>llama.cpp</td><td>Q3_K_M</td><td>32768</td><td><span class="badge ok">smooth</span></td><td>low</td><td>44.93</td><td>65.07</td><td>12.18</td><td><button class="copy" data-copy="python3 -m local_llm_lab deploy --model llama-3.3-70b --quant Q3_K_M --ctx 32768 --backend llama.cpp --hardware fixture:apple-m4-max-128gb --out .local-llm-lab/deploy/llama-3.3-70b-q3_k_m-32768">Copy</button></td></tr>
+<tr class="" data-backend="llama.cpp" data-quant="Q3_K_M" data-verdict="smooth" data-context="16384" data-margin="70.97" data-runtime="39.03" data-decode="12.18"><td>llama.cpp</td><td>Q3_K_M</td><td>16384</td><td><span class="badge ok">smooth</span></td><td>low</td><td>39.03</td><td>70.97</td><td>12.18</td><td><button class="copy" data-copy="python3 -m local_llm_lab deploy --model llama-3.3-70b --quant Q3_K_M --ctx 16384 --backend llama.cpp --hardware fixture:apple-m4-max-128gb --out .local-llm-lab/deploy/llama-3.3-70b-q3_k_m-16384">Copy</button></td></tr>
+<tr class="" data-backend="llama.cpp" data-quant="Q3_K_M" data-verdict="smooth" data-context="8192" data-margin="73.87" data-runtime="36.13" data-decode="12.18"><td>llama.cpp</td><td>Q3_K_M</td><td>8192</td><td><span class="badge ok">smooth</span></td><td>low</td><td>36.13</td><td>73.87</td><td>12.18</td><td><button class="copy" data-copy="python3 -m local_llm_lab deploy --model llama-3.3-70b --quant Q3_K_M --ctx 8192 --backend llama.cpp --hardware fixture:apple-m4-max-128gb --out .local-llm-lab/deploy/llama-3.3-70b-q3_k_m-8192">Copy</button></td></tr>
+<tr class="" data-backend="llama.cpp" data-quant="Q3_K_M" data-verdict="smooth" data-context="4096" data-margin="75.12" data-runtime="34.88" data-decode="12.18"><td>llama.cpp</td><td>Q3_K_M</td><td>4096</td><td><span class="badge ok">smooth</span></td><td>low</td><td>34.88</td><td>75.12</td><td>12.18</td><td><button class="copy" data-copy="python3 -m local_llm_lab deploy --model llama-3.3-70b --quant Q3_K_M --ctx 4096 --backend llama.cpp --hardware fixture:apple-m4-max-128gb --out .local-llm-lab/deploy/llama-3.3-70b-q3_k_m-4096">Copy</button></td></tr></tbody>
     </table>
   </section>
 </main>
+<script>
+const rows = Array.from(document.querySelectorAll("#matrix tbody tr"));
+const filters = {
+  verdict: document.querySelector("#verdictFilter"),
+  quant: document.querySelector("#quantFilter"),
+  backend: document.querySelector("#backendFilter"),
+  minMargin: document.querySelector("#minMargin")
+};
+function applyFilters() {
+  let visible = 0;
+  rows.forEach(row => {
+    const ok =
+      (!filters.verdict.value || row.dataset.verdict === filters.verdict.value) &&
+      (!filters.quant.value || row.dataset.quant === filters.quant.value) &&
+      (!filters.backend.value || row.dataset.backend === filters.backend.value) &&
+      (!filters.minMargin.value || Number(row.dataset.margin) >= Number(filters.minMargin.value));
+    row.hidden = !ok;
+    if (ok) visible += 1;
+  });
+  document.querySelector("#visibleCount").textContent = String(visible);
+}
+Object.values(filters).forEach(input => input.addEventListener("input", applyFilters));
+document.querySelector("#clearFilters").addEventListener("click", () => {
+  Object.values(filters).forEach(input => input.value = "");
+  applyFilters();
+});
+document.querySelectorAll("[data-copy]").forEach(button => {
+  button.addEventListener("click", async () => {
+    const text = button.dataset.copy || "";
+    try {
+      await navigator.clipboard.writeText(text);
+      const original = button.textContent;
+      button.textContent = "Copied";
+      setTimeout(() => button.textContent = original, 900);
+    } catch {
+      window.prompt("Copy command", text);
+    }
+  });
+});
+document.querySelectorAll("th[data-sort]").forEach(header => {
+  header.addEventListener("click", () => {
+    const key = header.dataset.sort;
+    const numeric = new Set(["context", "runtime", "margin", "decode"]);
+    const body = document.querySelector("#matrix tbody");
+    const sorted = rows.slice().sort((a, b) => {
+      const av = numeric.has(key) ? Number(a.dataset[key]) : String(a.dataset[key]);
+      const bv = numeric.has(key) ? Number(b.dataset[key]) : String(b.dataset[key]);
+      return av > bv ? -1 : av < bv ? 1 : 0;
+    });
+    sorted.forEach(row => body.appendChild(row));
+  });
+});
+</script>
 </body>
 </html>

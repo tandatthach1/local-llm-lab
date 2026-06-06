@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import sys
 from pathlib import Path
 
 from .bench import mock_benchmark, save_bench, tiny_local_benchmark
@@ -20,6 +21,7 @@ from .fixtures import list_fixture_names
 from .hardware import detect_hardware
 from .models import list_presets
 from .planner import make_plan
+from .profiles import list_profiles, load_profile, load_profile_document, save_profile
 from .render import print_json, print_plan
 from .report import generate_report
 from .server import serve_directory
@@ -35,7 +37,7 @@ def _add_plan_args(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--concurrency", type=int, default=1, help="Concurrent sequences/requests")
     parser.add_argument("--backend", default="auto", help="auto, llama.cpp, mlx, ollama, vllm")
     parser.add_argument("--format", default=None, help="gguf, mlx, safetensors, hf")
-    parser.add_argument("--hardware", default=None, help="Use fixture:name, e.g. fixture:apple-m4-max-128gb")
+    parser.add_argument("--hardware", default=None, help="Use fixture:name or profile:name")
     parser.add_argument("--layers", type=int, default=None)
     parser.add_argument("--heads", type=int, default=None)
     parser.add_argument("--kv-heads", type=int, default=None)
@@ -43,12 +45,25 @@ def _add_plan_args(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--kv-dtype-bytes", type=float, default=2.0)
 
 
+def _resolve_hardware_ref(value: str | None):
+    hardware_fixture = None
+    hardware_profile = None
+    hardware_label = "local"
+    if value:
+        if value.startswith("profile:"):
+            name = value.split(":", 1)[1]
+            hardware_profile = load_profile(name)
+            hardware_label = f"profile:{name}"
+        else:
+            hardware_fixture = value.removeprefix("fixture:")
+            hardware_label = f"fixture:{hardware_fixture}"
+    return hardware_fixture, hardware_profile, hardware_label
+
+
 def _plan_from_args(args: argparse.Namespace):
     if not args.model and not args.params:
         raise SystemExit("Either --model or --params is required.")
-    hardware_fixture = None
-    if args.hardware:
-        hardware_fixture = args.hardware.removeprefix("fixture:")
+    hardware_fixture, hardware_profile, _hardware_label = _resolve_hardware_ref(args.hardware)
     return make_plan(
         model_name=args.model,
         params=args.params,
@@ -58,6 +73,7 @@ def _plan_from_args(args: argparse.Namespace):
         backend=args.backend,
         model_format=args.format,
         hardware_fixture=hardware_fixture,
+        hardware=hardware_profile,
         layers=args.layers,
         heads=args.heads,
         kv_heads=args.kv_heads,
@@ -67,10 +83,15 @@ def _plan_from_args(args: argparse.Namespace):
 
 
 def cmd_detect(args: argparse.Namespace) -> int:
-    fixture = args.hardware.removeprefix("fixture:") if args.hardware else None
-    profile = detect_hardware(skip_probes=args.skip_probes, fixture=fixture)
+    fixture, hardware_profile, hardware_label = _resolve_hardware_ref(args.hardware)
+    profile = hardware_profile or detect_hardware(skip_probes=args.skip_probes, fixture=fixture)
+    saved_path = None
+    if args.save_profile:
+        saved_path = save_profile(args.save_profile, profile, source=hardware_label)
     if args.json:
         print_json(profile.to_dict())
+        if saved_path:
+            print(f"Saved profile: {saved_path}", file=sys.stderr)
     else:
         print(f"Hardware: {profile.name}")
         print(f"CPU: {profile.cpu}")
@@ -85,6 +106,8 @@ def cmd_detect(args: argparse.Namespace) -> int:
             print(f"Probes: {profile.probes}")
         if profile.note:
             print(f"Note: {profile.note}")
+        if saved_path:
+            print(f"Saved profile: {saved_path}")
     return 0
 
 
@@ -169,7 +192,7 @@ def cmd_report(args: argparse.Namespace) -> int:
 def cmd_compare(args: argparse.Namespace) -> int:
     if not args.model and not args.params:
         raise SystemExit("Either --model or --params is required.")
-    hardware_fixture = args.hardware.removeprefix("fixture:") if args.hardware else None
+    hardware_fixture, hardware_profile, hardware_label = _resolve_hardware_ref(args.hardware)
     request = CompareRequest(
         model_name=args.model,
         params=args.params,
@@ -179,6 +202,8 @@ def cmd_compare(args: argparse.Namespace) -> int:
         concurrency=args.concurrency,
         model_format=args.format,
         hardware_fixture=hardware_fixture,
+        hardware_profile=hardware_profile,
+        hardware_label=hardware_label,
         layers=args.layers,
         heads=args.heads,
         kv_heads=args.kv_heads,
@@ -237,9 +262,32 @@ def cmd_list(args: argparse.Namespace) -> int:
     if args.what == "models":
         for model in list_presets():
             print(f"{model.id}\t{model.family}\t{model.params_b}B\t{model.confidence}")
-    else:
+    elif args.what == "hardware":
         for name in list_fixture_names():
             print(name)
+    else:
+        profiles = list_profiles()
+        if not profiles:
+            print("(no profiles saved)")
+        for profile in profiles:
+            memory = profile["memory_total_gib"]
+            memory_text = f"{memory} GiB" if memory is not None else "unknown memory"
+            print(f"{profile['name']}\t{profile['hardware_name']}\t{memory_text}")
+    return 0
+
+
+def cmd_profile_show(args: argparse.Namespace) -> int:
+    document = load_profile_document(args.name)
+    if args.json:
+        print_json(document)
+    else:
+        hardware = document["hardware"]
+        print(f"Profile: {document['profile_name']}")
+        print(f"Created: {document['created_at']}")
+        print(f"Source: {document['source']}")
+        print(f"Hardware: {hardware['name']}")
+        print(f"Memory: {hardware['memory_total_gib']} GiB total, {hardware['memory_available_gib']} GiB available")
+        print(f"GPU: {hardware['gpu']}")
     return 0
 
 
@@ -250,7 +298,8 @@ def build_parser() -> argparse.ArgumentParser:
     detect = sub.add_parser("detect", help="Detect local hardware and backend capabilities.")
     detect.add_argument("--json", action="store_true")
     detect.add_argument("--skip-probes", action="store_true")
-    detect.add_argument("--hardware", default=None, help="Use fixture:name instead of local detection.")
+    detect.add_argument("--hardware", default=None, help="Use fixture:name or profile:name instead of local detection.")
+    detect.add_argument("--save-profile", help="Save a sanitized hardware profile for later use.")
     detect.set_defaults(func=cmd_detect)
 
     plan = sub.add_parser("plan", help="Estimate whether a model can run locally.")
@@ -300,7 +349,7 @@ def build_parser() -> argparse.ArgumentParser:
     compare.add_argument("--backends", default=None, help="Comma-separated backends. Default: auto")
     compare.add_argument("--concurrency", type=int, default=1)
     compare.add_argument("--format", default=None)
-    compare.add_argument("--hardware", default=None, help="Use fixture:name, e.g. fixture:apple-m4-max-128gb")
+    compare.add_argument("--hardware", default=None, help="Use fixture:name or profile:name")
     compare.add_argument("--layers", type=int, default=None)
     compare.add_argument("--heads", type=int, default=None)
     compare.add_argument("--kv-heads", type=int, default=None)
@@ -320,8 +369,15 @@ def build_parser() -> argparse.ArgumentParser:
     demo.add_argument("--json", action="store_true")
     demo.set_defaults(func=cmd_demo)
 
-    listing = sub.add_parser("list", help="List model presets or hardware fixtures.")
-    listing.add_argument("what", choices=["models", "hardware"])
+    profile = sub.add_parser("profile", help="Inspect saved measured hardware profiles.")
+    profile_sub = profile.add_subparsers(dest="profile_command", required=True)
+    profile_show = profile_sub.add_parser("show", help="Show one saved hardware profile.")
+    profile_show.add_argument("name")
+    profile_show.add_argument("--json", action="store_true")
+    profile_show.set_defaults(func=cmd_profile_show)
+
+    listing = sub.add_parser("list", help="List model presets, hardware fixtures, or saved profiles.")
+    listing.add_argument("what", choices=["models", "hardware", "profiles"])
     listing.set_defaults(func=cmd_list)
     return parser
 

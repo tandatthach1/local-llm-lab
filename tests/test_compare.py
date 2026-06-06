@@ -50,8 +50,12 @@ class CompareTest(unittest.TestCase):
             self.assertIn("compare.md", names)
             self.assertIn("index.html", names)
             self.assertIn("compare_decode.svg", names)
+            html = (Path(tmp) / "index.html").read_text(encoding="utf-8")
+            self.assertIn("verdictFilter", html)
+            self.assertIn("Copy best deploy dry-run", html)
+            self.assertIn("data-sort=\"margin\"", html)
+            self.assertIn("python3 -m local_llm_lab deploy", html)
 
 
 if __name__ == "__main__":
     unittest.main()
-

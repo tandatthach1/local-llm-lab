@@ -2,10 +2,12 @@ from __future__ import annotations
 
 import html
 import json
+import shlex
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from .hardware import HardwareProfile
 from .planner import PlanResult, make_plan
 from .report import _svg_bar_chart
 
@@ -28,6 +30,8 @@ class CompareRequest:
     concurrency: int
     model_format: str | None
     hardware_fixture: str | None
+    hardware_profile: HardwareProfile | None = None
+    hardware_label: str | None = None
     layers: int | None = None
     heads: int | None = None
     kv_heads: int | None = None
@@ -67,6 +71,23 @@ def _sort_key(plan: PlanResult) -> tuple[float, ...]:
     )
 
 
+def _deploy_command(request: CompareRequest, plan: PlanResult) -> str:
+    command = ["python3", "-m", "local_llm_lab", "deploy"]
+    if request.model_name:
+        command.extend(["--model", request.model_name])
+    elif request.params:
+        command.extend(["--params", request.params])
+    command.extend(["--quant", plan.inputs.quant.name])
+    command.extend(["--ctx", str(plan.inputs.context_tokens)])
+    command.extend(["--backend", plan.recommended_backend])
+    if request.model_format:
+        command.extend(["--format", request.model_format])
+    if request.hardware_label and request.hardware_label != "local":
+        command.extend(["--hardware", request.hardware_label])
+    command.extend(["--out", f".local-llm-lab/deploy/{plan.inputs.model.id}-{plan.inputs.quant.name.lower()}-{plan.inputs.context_tokens}"])
+    return " ".join(shlex.quote(part) for part in command)
+
+
 def compare_plans(request: CompareRequest) -> dict[str, Any]:
     plans: list[PlanResult] = []
     for backend in request.backends:
@@ -82,6 +103,7 @@ def compare_plans(request: CompareRequest) -> dict[str, Any]:
                         backend=backend,
                         model_format=request.model_format,
                         hardware_fixture=request.hardware_fixture,
+                        hardware=request.hardware_profile,
                         layers=request.layers,
                         heads=request.heads,
                         kv_heads=request.kv_heads,
@@ -93,6 +115,7 @@ def compare_plans(request: CompareRequest) -> dict[str, Any]:
     sorted_plans = sorted(plans, key=_sort_key)
     runnable = [plan for plan in sorted_plans if plan.verdict in {"smooth", "tight"}]
     best = runnable[0] if runnable else sorted_plans[0]
+    hardware_label = request.hardware_label or (f"fixture:{request.hardware_fixture}" if request.hardware_fixture else "local")
     verdict_counts: dict[str, int] = {}
     for plan in plans:
         verdict_counts[plan.verdict] = verdict_counts.get(plan.verdict, 0) + 1
@@ -116,6 +139,7 @@ def compare_plans(request: CompareRequest) -> dict[str, Any]:
                 "kv_cache_gib": plan.memory.kv_cache_gib,
                 "decode_tokens_s_mid": plan.expected_decode_tokens_s["mid"],
                 "confidence": plan.confidence,
+                "deploy_command": _deploy_command(request, plan),
             }
         )
 
@@ -129,7 +153,7 @@ def compare_plans(request: CompareRequest) -> dict[str, Any]:
                 "backends": request.backends,
                 "concurrency": request.concurrency,
                 "format": request.model_format,
-                "hardware": f"fixture:{request.hardware_fixture}" if request.hardware_fixture else "local",
+                "hardware": hardware_label,
             },
             "summary": {
                 "total_plans": len(plans),
@@ -143,6 +167,7 @@ def compare_plans(request: CompareRequest) -> dict[str, Any]:
                     "risk_level": best.risk_level,
                     "margin_gib": best.memory.margin_gib,
                     "decode_tokens_s_mid": best.expected_decode_tokens_s["mid"],
+                    "deploy_command": _deploy_command(request, best),
                 },
             },
             "rows": rows,
@@ -194,20 +219,51 @@ def compare_html(data: dict[str, Any], chart_files: list[str]) -> str:
     compare = data["compare"]
     summary = compare["summary"]
     best = summary["best"]
-    rows = "\n".join(
-        "<tr>"
-        f"<td>{html.escape(str(row['backend']))}</td>"
-        f"<td>{html.escape(str(row['quantization']))}</td>"
-        f"<td>{row['context_tokens']}</td>"
-        f"<td><span class=\"badge {_verdict_class(str(row['verdict']))}\">{html.escape(str(row['verdict']))}</span></td>"
-        f"<td>{html.escape(str(row['risk_level']))}</td>"
-        f"<td>{row['runtime_required_gib']}</td>"
-        f"<td>{row['margin_gib']}</td>"
-        f"<td>{row['decode_tokens_s_mid']}</td>"
-        "</tr>"
-        for row in compare["rows"]
-    )
+    verdict_counts = summary.get("verdict_counts", {})
+    best_command = html.escape(str(best.get("deploy_command", "")), quote=True)
+    row_chunks = []
+    for row in compare["rows"]:
+        is_best = (
+            row["backend"] == best["backend"]
+            and row["quantization"] == best["quantization"]
+            and row["context_tokens"] == best["context_tokens"]
+            and row["verdict"] == best["verdict"]
+        )
+        row_chunks.append(
+            "<tr"
+            f" class=\"{'best-row' if is_best else ''}\""
+            f" data-backend=\"{html.escape(str(row['backend']), quote=True)}\""
+            f" data-quant=\"{html.escape(str(row['quantization']), quote=True)}\""
+            f" data-verdict=\"{html.escape(str(row['verdict']), quote=True)}\""
+            f" data-context=\"{row['context_tokens']}\""
+            f" data-margin=\"{row['margin_gib']}\""
+            f" data-runtime=\"{row['runtime_required_gib']}\""
+            f" data-decode=\"{row['decode_tokens_s_mid']}\""
+            ">"
+            f"<td>{html.escape(str(row['backend']))}</td>"
+            f"<td>{html.escape(str(row['quantization']))}</td>"
+            f"<td>{row['context_tokens']}</td>"
+            f"<td><span class=\"badge {_verdict_class(str(row['verdict']))}\">{html.escape(str(row['verdict']))}</span></td>"
+            f"<td>{html.escape(str(row['risk_level']))}</td>"
+            f"<td>{row['runtime_required_gib']}</td>"
+            f"<td>{row['margin_gib']}</td>"
+            f"<td>{row['decode_tokens_s_mid']}</td>"
+            f"<td><button class=\"copy\" data-copy=\"{html.escape(str(row['deploy_command']), quote=True)}\">Copy</button></td>"
+            "</tr>"
+        )
+    rows = "\n".join(row_chunks)
     charts = "\n".join(f'<img src="{html.escape(name)}" alt="{html.escape(name)}">' for name in chart_files)
+    quant_options = "\n".join(
+        f'<option value="{html.escape(str(item), quote=True)}">{html.escape(str(item))}</option>'
+        for item in sorted({str(row["quantization"]) for row in compare["rows"]})
+    )
+    backend_options = "\n".join(
+        f'<option value="{html.escape(str(item), quote=True)}">{html.escape(str(item))}</option>'
+        for item in sorted({str(row["backend"]) for row in compare["rows"]})
+    )
+    risk_note = "No runnable candidate found. Treat every command as a dry-run starting point, not a recommendation."
+    if summary["runnable_plans"]:
+        risk_note = "Best candidate is the first smooth/tight plan after risk, precision, context, speed, and memory margin sorting."
     return f"""<!doctype html>
 <html lang="en">
 <head>
@@ -215,7 +271,7 @@ def compare_html(data: dict[str, Any], chart_files: list[str]) -> str:
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>local-llm-lab compare</title>
   <style>
-    :root {{ font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: #111827; background: #f7f8fb; }}
+    :root {{ font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: #111827; background: #f6f7f9; }}
     body {{ margin: 0; }}
     main {{ max-width: 1180px; margin: 0 auto; padding: 28px 20px 56px; }}
     h1 {{ margin: 0 0 6px; font-size: 34px; letter-spacing: 0; }}
@@ -232,10 +288,22 @@ def compare_html(data: dict[str, Any], chart_files: list[str]) -> str:
     .fail {{ color: #7f1d1d; background: #fecaca; }}
     .neutral {{ color: #334155; background: #e2e8f0; }}
     .section {{ margin-top: 20px; }}
+    .notice {{ border-left: 4px solid #2563eb; background: #eff6ff; padding: 12px 14px; margin-top: 14px; color: #1e3a8a; }}
+    .toolbar {{ display: flex; flex-wrap: wrap; gap: 10px; align-items: end; margin: 16px 0 12px; }}
+    .control {{ display: grid; gap: 5px; }}
+    .control label {{ color: #667085; font-size: 12px; text-transform: uppercase; }}
+    select, input, button {{ border: 1px solid #cfd6e3; border-radius: 6px; background: #fff; color: #111827; font: inherit; padding: 8px 10px; }}
+    button {{ cursor: pointer; }}
+    button.primary {{ color: #fff; background: #1f2937; border-color: #1f2937; }}
+    button.copy {{ padding: 6px 9px; font-size: 12px; }}
+    code {{ display: block; white-space: pre-wrap; overflow-wrap: anywhere; background: #111827; color: #f9fafb; border-radius: 8px; padding: 12px; }}
     table {{ width: 100%; border-collapse: collapse; background: #fff; border: 1px solid #d9dee8; border-radius: 8px; overflow: hidden; }}
     th, td {{ padding: 10px 12px; border-bottom: 1px solid #eef1f6; text-align: left; font-size: 14px; }}
-    th {{ background: #f1f4f9; color: #344054; font-size: 12px; text-transform: uppercase; letter-spacing: 0; }}
+    th {{ background: #f1f4f9; color: #344054; font-size: 12px; text-transform: uppercase; letter-spacing: 0; cursor: pointer; }}
+    tr.best-row td {{ background: #f8fafc; box-shadow: inset 3px 0 0 #10b981; }}
+    tr[hidden] {{ display: none; }}
     img {{ max-width: 100%; background: #fff; border: 1px solid #d9dee8; border-radius: 8px; margin: 10px 0; }}
+    .count {{ color: #5b6472; margin: 8px 0; }}
   </style>
 </head>
 <body>
@@ -251,15 +319,79 @@ def compare_html(data: dict[str, Any], chart_files: list[str]) -> str:
       <div class="metric"><span class="label">Margin</span><strong>{best['margin_gib']} GiB</strong></div>
       <div class="metric"><span class="label">Decode</span><strong>{best['decode_tokens_s_mid']} tok/s</strong></div>
     </div>
+    <p class="notice">{html.escape(risk_note)} Verdict counts: {html.escape(json.dumps(verdict_counts, sort_keys=True))}</p>
+    <code id="bestCommand">{best_command}</code>
+    <button class="primary" data-copy="{best_command}">Copy best deploy dry-run</button>
   </section>
   <section class="section">{charts}</section>
   <section class="section">
-    <table>
-      <thead><tr><th>Backend</th><th>Quant</th><th>Context</th><th>Verdict</th><th>Risk</th><th>Runtime GiB</th><th>Margin GiB</th><th>Decode tok/s</th></tr></thead>
+    <div class="toolbar">
+      <div class="control"><label for="verdictFilter">Verdict</label><select id="verdictFilter"><option value="">All</option><option value="smooth">smooth</option><option value="tight">tight</option><option value="not-recommended">not-recommended</option><option value="does-not-fit">does-not-fit</option></select></div>
+      <div class="control"><label for="quantFilter">Quant</label><select id="quantFilter"><option value="">All</option>{quant_options}</select></div>
+      <div class="control"><label for="backendFilter">Backend</label><select id="backendFilter"><option value="">All</option>{backend_options}</select></div>
+      <div class="control"><label for="minMargin">Min margin GiB</label><input id="minMargin" type="number" step="1" placeholder="any"></div>
+      <button id="clearFilters">Clear</button>
+    </div>
+    <p class="count"><span id="visibleCount">{len(compare['rows'])}</span> of {len(compare['rows'])} plans visible. Click a column header to sort.</p>
+    <table id="matrix">
+      <thead><tr><th data-sort="backend">Backend</th><th data-sort="quant">Quant</th><th data-sort="context">Context</th><th data-sort="verdict">Verdict</th><th>Risk</th><th data-sort="runtime">Runtime GiB</th><th data-sort="margin">Margin GiB</th><th data-sort="decode">Decode tok/s</th><th>Deploy</th></tr></thead>
       <tbody>{rows}</tbody>
     </table>
   </section>
 </main>
+<script>
+const rows = Array.from(document.querySelectorAll("#matrix tbody tr"));
+const filters = {{
+  verdict: document.querySelector("#verdictFilter"),
+  quant: document.querySelector("#quantFilter"),
+  backend: document.querySelector("#backendFilter"),
+  minMargin: document.querySelector("#minMargin")
+}};
+function applyFilters() {{
+  let visible = 0;
+  rows.forEach(row => {{
+    const ok =
+      (!filters.verdict.value || row.dataset.verdict === filters.verdict.value) &&
+      (!filters.quant.value || row.dataset.quant === filters.quant.value) &&
+      (!filters.backend.value || row.dataset.backend === filters.backend.value) &&
+      (!filters.minMargin.value || Number(row.dataset.margin) >= Number(filters.minMargin.value));
+    row.hidden = !ok;
+    if (ok) visible += 1;
+  }});
+  document.querySelector("#visibleCount").textContent = String(visible);
+}}
+Object.values(filters).forEach(input => input.addEventListener("input", applyFilters));
+document.querySelector("#clearFilters").addEventListener("click", () => {{
+  Object.values(filters).forEach(input => input.value = "");
+  applyFilters();
+}});
+document.querySelectorAll("[data-copy]").forEach(button => {{
+  button.addEventListener("click", async () => {{
+    const text = button.dataset.copy || "";
+    try {{
+      await navigator.clipboard.writeText(text);
+      const original = button.textContent;
+      button.textContent = "Copied";
+      setTimeout(() => button.textContent = original, 900);
+    }} catch {{
+      window.prompt("Copy command", text);
+    }}
+  }});
+}});
+document.querySelectorAll("th[data-sort]").forEach(header => {{
+  header.addEventListener("click", () => {{
+    const key = header.dataset.sort;
+    const numeric = new Set(["context", "runtime", "margin", "decode"]);
+    const body = document.querySelector("#matrix tbody");
+    const sorted = rows.slice().sort((a, b) => {{
+      const av = numeric.has(key) ? Number(a.dataset[key]) : String(a.dataset[key]);
+      const bv = numeric.has(key) ? Number(b.dataset[key]) : String(b.dataset[key]);
+      return av > bv ? -1 : av < bv ? 1 : 0;
+    }});
+    sorted.forEach(row => body.appendChild(row));
+  }});
+}});
+</script>
 </body>
 </html>
 """

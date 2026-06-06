@@ -6,10 +6,12 @@ import unittest
 from pathlib import Path
 
 from local_llm_lab.bench import mock_benchmark
+from local_llm_lab.compare import CompareRequest, compare_plans, write_compare_outputs
 from local_llm_lab.deploy import generate_deploy_files
 from local_llm_lab.hardware import detect_hardware
 from local_llm_lab.planner import make_plan
 from local_llm_lab.report import generate_report
+from local_llm_lab.server import render_report_hub
 from local_llm_lab.stress import mock_stress
 
 
@@ -54,6 +56,42 @@ class WorkflowTest(unittest.TestCase):
             self.assertIn("Markdown Export", html)
             self.assertIn("Stress Simulation", html)
             self.assertIn(str(out / "index.html"), result["files"])
+
+    def test_report_hub_finds_report_directories(self) -> None:
+        plan = make_plan(
+            params="600B",
+            quant_name="Q4_K_M",
+            context_tokens=32768,
+            hardware_fixture="apple-m4-max-128gb",
+        )
+        bench = mock_benchmark(plan)
+        stress = mock_stress(plan, bench)
+        data = {"plan": plan.to_dict(), "bench": bench.to_dict(), "stress": stress.to_dict()}
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            source = root / "demo.json"
+            source.write_text(json.dumps(data), encoding="utf-8")
+            generate_report(source, root / "demo")
+            compare = compare_plans(
+                CompareRequest(
+                    model_name="llama-3.3-70b",
+                    params=None,
+                    quantizations=["Q4_K_M"],
+                    contexts=[8192],
+                    backends=["auto"],
+                    concurrency=1,
+                    model_format=None,
+                    hardware_fixture="apple-m4-max-128gb",
+                )
+            )
+            write_compare_outputs(compare, root / "compare")
+            hub = render_report_hub(root)
+            self.assertIsNotNone(hub)
+            assert hub is not None
+            self.assertIn("local-llm-lab Report Hub", hub)
+            self.assertIn("custom-600b", hub)
+            self.assertIn("llama-3.3-70b", hub)
+            self.assertIn("Open report", hub)
 
     def test_fixture_detection_has_no_sensitive_identifiers(self) -> None:
         profile = detect_hardware(skip_probes=True, fixture="apple-m4-max-128gb").to_dict()
