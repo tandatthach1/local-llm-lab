@@ -53,8 +53,11 @@ class CompareTest(unittest.TestCase):
             html = (Path(tmp) / "index.html").read_text(encoding="utf-8")
             self.assertIn("verdictFilter", html)
             self.assertIn("Copy best deploy dry-run", html)
+            self.assertIn("Copy recommend command", html)
+            self.assertIn("Recommendation reason", html)
             self.assertIn("data-sort=\"margin\"", html)
             self.assertIn("python3 -m local_llm_lab deploy", html)
+            self.assertIn("python3 -m local_llm_lab recommend", html)
 
 
 if __name__ == "__main__":

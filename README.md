@@ -37,7 +37,8 @@ It is a lightweight CLI for local LLM planning, dry-run deployment, benchmarking
 - Detect local hardware: OS, CPU/GPU, unified memory/VRAM, disk, Metal/CUDA/AVX/NEON, backend binaries.
 - Save measured hardware profiles and reuse them in later planning runs.
 - Plan whether a model fits: weights, KV cache, overhead, OS reserve, margin, verdict, risk, backend, quantization.
-- Deploy without downloading huge models: generate llama.cpp, MLX, and Ollama dry-run scripts/configs.
+- Recommend the best local run plan across quantization, context, and backend options.
+- Deploy without downloading huge models: generate llama.cpp, MLX, and Ollama dry-run scripts/configs with a preflight runbook.
 - Benchmark with deterministic mock data or tiny local smoke checks.
 - Stress-test resource contention with reproducible LLM + Blender/GPU-style simulations.
 - Report in Markdown, JSON, SVG charts, and static HTML.
@@ -77,6 +78,7 @@ Create demo data and browse all local reports:
 
 ```bash
 python3 -m local_llm_lab demo --out examples
+python3 -m local_llm_lab recommend --model llama-3.3-70b --hardware fixture:apple-m4-max-128gb
 python3 -m local_llm_lab serve --dir sample_reports --port 8787
 ```
 
@@ -155,6 +157,24 @@ This writes:
 
 Use it before `deploy` when you want the best safe compromise instead of testing one setting at a time. The HTML report includes local-only filters, sorting, best-candidate highlighting, and copyable dry-run deploy commands.
 
+### recommend
+
+Ask local-llm-lab to scan a matrix and pick the best next action:
+
+```bash
+python3 -m local_llm_lab recommend \
+  --model llama-3.3-70b \
+  --hardware fixture:apple-m4-max-128gb
+
+python3 -m local_llm_lab recommend \
+  --params 600B \
+  --hardware fixture:apple-m4-max-128gb \
+  --target tight \
+  --json
+```
+
+`recommend` returns one clear status: `recommended` when the target can be met, or `no-fit` when no scanned candidate is safe enough. It includes the selected backend, quantization, context length, risk, memory margin, estimated decode speed, alternatives, downgrade options, and a copyable `deploy` dry-run command.
+
 ### deploy
 
 ```bash
@@ -168,12 +188,14 @@ python3 -m local_llm_lab deploy \
 This writes:
 
 - `local-llm-lab-plan.json`
+- `README.md`
+- `preflight.sh`
 - `run-llama-cpp.sh`
 - `run-mlx.sh`
 - `Modelfile`
 - `run-ollama.sh`
 
-It does not download model weights.
+It does not download model weights. Run `./preflight.sh` before launching a real backend; it checks the model path, recommended backend, verdict/risk, and obvious configuration problems.
 
 ### bench
 
@@ -200,7 +222,7 @@ python3 -m local_llm_lab serve --dir sample_reports/demo --port 8787
 python3 -m local_llm_lab serve --dir sample_reports --port 8787
 ```
 
-Reports include Markdown, JSON, static HTML, and SVG charts. If `matplotlib` is installed, PNG charts are added. Serving a parent directory opens a local Report Hub that indexes report and compare folders without external assets or network services.
+Reports include Markdown, JSON, static HTML, a decision-first summary, memory waterfall SVG, and benchmark/stress charts. If `matplotlib` is installed, PNG charts are added. Serving a parent directory opens a local Report Hub that indexes report and compare folders without external assets or network services.
 
 ## Model presets
 
@@ -249,10 +271,11 @@ v0.1:
 
 - Honest planning for `--model` and `--params`
 - Compare matrices for quantization/context/backend tradeoffs
-- Dry-run deploy generation for llama.cpp, MLX, Ollama
+- One-command recommendations from scanned planning matrices
+- Dry-run deploy generation for llama.cpp, MLX, Ollama with preflight runbooks
 - Mock bench/stress data
-- Structured Markdown/JSON/SVG/HTML reports
-- Local report server
+- Structured Markdown/JSON/SVG/HTML reports with decision summaries and memory waterfall charts
+- Local report server and Report Hub
 
 v0.2:
 

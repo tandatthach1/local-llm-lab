@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any
 
 from .optional import optional_import
+from .units import format_params
 
 
 def _load(path: str | Path) -> dict[str, Any]:
@@ -35,6 +36,55 @@ def _svg_bar_chart(items: list[tuple[str, float]], title: str, unit: str) -> str
             f'<text x="20" y="30" font-size="20" font-weight="700">{html.escape(title)}</text>',
             *rows,
             f'<line x1="{margin_left}" y1="{height - margin_bottom}" x2="{width - 32}" y2="{height - margin_bottom}" stroke="#94a3b8"/>',
+            "</svg>",
+        ]
+    )
+
+
+def _svg_memory_waterfall(memory: dict[str, Any]) -> str:
+    width, height = 900, 320
+    x, y, bar_h = 170, 76, 34
+    components = [
+        ("weights", float(memory.get("weights_gib", 0) or 0), "#2563eb"),
+        ("KV cache", float(memory.get("kv_cache_gib", 0) or 0), "#0891b2"),
+        ("backend", float(memory.get("backend_overhead_gib", 0) or 0), "#7c3aed"),
+        ("activation", float(memory.get("activation_gib", 0) or 0), "#ea580c"),
+        ("OS reserve", float(memory.get("os_reserve_gib", 0) or 0), "#64748b"),
+    ]
+    available = float(memory.get("available_runtime_gib", 0) or 0)
+    total_required = float(memory.get("total_required_gib", 0) or 0)
+    max_value = max(available, total_required, 1.0)
+    plot_w = width - x - 44
+    cursor = x
+    segments = []
+    legend = []
+    for idx, (label, value, color) in enumerate(components):
+        seg_w = value / max_value * plot_w
+        segments.append(
+            f'<rect x="{cursor:.1f}" y="{y}" width="{seg_w:.1f}" height="{bar_h}" fill="{color}"/>'
+            f'<title>{html.escape(label)}: {value:.2f} GiB</title>'
+        )
+        legend_y = 146 + idx * 28
+        legend.append(
+            f'<rect x="24" y="{legend_y - 13}" width="12" height="12" fill="{color}"/>'
+            f'<text x="44" y="{legend_y - 3}" font-size="13">{html.escape(label)}: {value:.2f} GiB</text>'
+        )
+        cursor += seg_w
+    available_x = x + available / max_value * plot_w
+    margin = float(memory.get("margin_gib", 0) or 0)
+    margin_color = "#059669" if margin >= 0 else "#dc2626"
+    return "\n".join(
+        [
+            f'<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{height}" viewBox="0 0 {width} {height}">',
+            '<rect width="100%" height="100%" fill="#ffffff"/>',
+            '<text x="24" y="34" font-size="20" font-weight="700">Memory waterfall</text>',
+            '<text x="24" y="56" font-size="13" fill="#5b6472">Estimated memory components versus available runtime memory.</text>',
+            f'<rect x="{x}" y="{y}" width="{plot_w}" height="{bar_h}" fill="#f1f5f9" stroke="#cbd5e1"/>',
+            *segments,
+            f'<line x1="{available_x:.1f}" y1="{y - 14}" x2="{available_x:.1f}" y2="{y + bar_h + 14}" stroke="{margin_color}" stroke-width="3"/>',
+            f'<text x="{min(available_x + 8, width - 250):.1f}" y="{y - 18}" font-size="13" fill="{margin_color}">available runtime: {available:.2f} GiB</text>',
+            f'<text x="{x}" y="{y + bar_h + 34}" font-size="13" fill="{margin_color}">margin: {margin:.2f} GiB</text>',
+            *legend,
             "</svg>",
         ]
     )
@@ -137,6 +187,50 @@ def _metric(label: str, value: object, suffix: str = "") -> str:
     )
 
 
+def _deploy_command_from_plan(plan: dict[str, Any]) -> str:
+    inputs = plan.get("inputs", {})
+    model = inputs.get("model", {})
+    quant = inputs.get("quant", {})
+    model_id = str(model.get("id", "custom"))
+    params = model.get("params_b")
+    command = ["python3", "-m", "local_llm_lab", "deploy"]
+    if model_id.startswith("custom-") and params:
+        command.extend(["--params", format_params(float(params))])
+    else:
+        command.extend(["--model", model_id])
+    command.extend(["--quant", str(quant.get("name", "Q4_K_M"))])
+    command.extend(["--ctx", str(inputs.get("context_tokens", 8192))])
+    command.extend(["--backend", str(plan.get("recommended_backend", "auto"))])
+    command.extend(["--out", f".local-llm-lab/deploy/{model_id}-{str(quant.get('name', 'q4')).lower()}"])
+    return " ".join(command)
+
+
+def _decision_text(verdict: str, risk: str) -> str:
+    if verdict == "smooth":
+        return "Good candidate for a dry-run deploy and short validation benchmark."
+    if verdict == "tight":
+        return "Possible, but validate carefully and keep memory pressure low."
+    if verdict == "not-recommended":
+        return "Technically close, but not recommended without lowering risk."
+    if verdict == "does-not-fit":
+        return "Do not run locally with this configuration."
+    return f"Review manually; risk is {risk}."
+
+
+def _why_text(memory: dict[str, Any]) -> str:
+    margin = float(memory.get("margin_gib", 0) or 0)
+    if margin < 0:
+        return f"Runtime memory exceeds available runtime memory by {abs(margin):.2f} GiB."
+    components = {
+        "weights": float(memory.get("weights_gib", 0) or 0),
+        "KV cache": float(memory.get("kv_cache_gib", 0) or 0),
+        "backend overhead": float(memory.get("backend_overhead_gib", 0) or 0),
+        "activation": float(memory.get("activation_gib", 0) or 0),
+    }
+    largest = max(components.items(), key=lambda item: item[1])
+    return f"The largest memory component is {largest[0]} at {largest[1]:.2f} GiB; estimated margin is {margin:.2f} GiB."
+
+
 def _benchmark_table(rows: list[dict[str, Any]]) -> str:
     if not rows:
         return ""
@@ -193,6 +287,7 @@ def _html_doc(data: dict[str, Any], markdown: str, svg_files: list[str]) -> str:
     tokens = plan.get("expected_decode_tokens_s", {})
     verdict = str(plan.get("verdict", "unknown"))
     risk = str(plan.get("risk_level", "unknown"))
+    deploy_command = _deploy_command_from_plan(plan)
     charts = []
     for svg in svg_files:
         charts.append(f'<img src="{html.escape(svg)}" alt="{html.escape(svg)}">')
@@ -226,6 +321,10 @@ def _html_doc(data: dict[str, Any], markdown: str, svg_files: list[str]) -> str:
     .fail {{ color: #7f1d1d; background: #fecaca; }}
     .neutral {{ color: #334155; background: #e2e8f0; }}
     .section {{ margin-top: 22px; }}
+    .decision {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 12px; margin: 20px 0; }}
+    .decision-card {{ border: 1px solid #d9dee8; background: #fff; border-radius: 8px; padding: 16px; }}
+    .decision-card p {{ margin: 8px 0 0; color: #374151; line-height: 1.45; }}
+    .command {{ display: block; white-space: pre-wrap; overflow-wrap: anywhere; background: #111827; color: #f9fafb; border-radius: 8px; padding: 12px; margin-top: 10px; }}
     table {{ width: 100%; border-collapse: collapse; background: #fff; border: 1px solid #d9dee8; border-radius: 8px; overflow: hidden; }}
     th, td {{ padding: 10px 12px; border-bottom: 1px solid #eef1f6; text-align: left; font-size: 14px; }}
     th {{ background: #f1f4f9; color: #344054; font-size: 12px; text-transform: uppercase; letter-spacing: 0; }}
@@ -239,6 +338,11 @@ def _html_doc(data: dict[str, Any], markdown: str, svg_files: list[str]) -> str:
 <main>
   <h1>local-llm-lab report</h1>
   <p class="subtle">A transparent estimate of local model fit, throughput, and stress behavior.</p>
+  <section class="decision" aria-label="Decision summary">
+    <div class="decision-card"><h2>Decision</h2><span class="badge {_badge_class(verdict)}">{html.escape(verdict)}</span><p>{html.escape(_decision_text(verdict, risk))}</p></div>
+    <div class="decision-card"><h2>Why</h2><p>{html.escape(_why_text(memory))}</p></div>
+    <div class="decision-card"><h2>Next steps</h2><p>{html.escape((plan.get("downgrade_options") or ["Run deploy preflight, then benchmark a short prompt."])[0])}</p><code class="command">{html.escape(deploy_command)}</code></div>
+  </section>
   <section class="hero">
     <div class="hero-top">
       <div>
@@ -317,6 +421,12 @@ def generate_report(input_path: str | Path, out_dir: str | Path) -> dict[str, An
         path.write_text(_svg_bar_chart(stress_items, "Stress throughput drop", "%"), encoding="utf-8")
         svg_files.append(path.name)
         _matplotlib_chart(stress_items, target / "stress_drop.png", "Stress throughput drop")
+
+    memory = source.get("plan", {}).get("memory", {})
+    if memory:
+        path = target / "memory_waterfall.svg"
+        path.write_text(_svg_memory_waterfall(memory), encoding="utf-8")
+        svg_files.insert(0, path.name)
 
     html_path = target / "index.html"
     html_path.write_text(_html_doc(source, md, svg_files), encoding="utf-8")

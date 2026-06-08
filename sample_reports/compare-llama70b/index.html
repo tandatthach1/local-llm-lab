@@ -23,6 +23,9 @@
     .neutral { color: #334155; background: #e2e8f0; }
     .section { margin-top: 20px; }
     .notice { border-left: 4px solid #2563eb; background: #eff6ff; padding: 12px 14px; margin-top: 14px; color: #1e3a8a; }
+    .recommend { border: 1px solid #d9dee8; background: #fff; border-radius: 8px; padding: 16px; margin: 18px 0; }
+    .recommend h2 { margin: 0 0 8px; font-size: 18px; }
+    .recommend p { margin: 0 0 12px; color: #374151; line-height: 1.45; }
     .toolbar { display: flex; flex-wrap: wrap; gap: 10px; align-items: end; margin: 16px 0 12px; }
     .control { display: grid; gap: 5px; }
     .control label { color: #667085; font-size: 12px; text-transform: uppercase; }
@@ -56,6 +59,12 @@
     <p class="notice">Best candidate is the first smooth/tight plan after risk, precision, context, speed, and memory margin sorting. Verdict counts: {&quot;smooth&quot;: 16}</p>
     <code id="bestCommand">python3 -m local_llm_lab deploy --model llama-3.3-70b --quant Q6_K --ctx 32768 --backend llama.cpp --hardware fixture:apple-m4-max-128gb --out .local-llm-lab/deploy/llama-3.3-70b-q6_k-32768</code>
     <button class="primary" data-copy="python3 -m local_llm_lab deploy --model llama-3.3-70b --quant Q6_K --ctx 32768 --backend llama.cpp --hardware fixture:apple-m4-max-128gb --out .local-llm-lab/deploy/llama-3.3-70b-q6_k-32768">Copy best deploy dry-run</button>
+  </section>
+  <section class="recommend">
+    <h2>Recommendation reason</h2>
+    <p>16 of 16 candidates are runnable. The highlighted candidate balances verdict, risk, quantization quality, context length, speed, and memory margin.</p>
+    <code>python3 -m local_llm_lab recommend --model llama-3.3-70b --hardware fixture:apple-m4-max-128gb --quants Q6_K,Q5_K_M,Q4_K_M,Q3_K_M --contexts 4096,8192,16384,32768 --backends auto --target tight</code>
+    <button class="primary" data-copy="python3 -m local_llm_lab recommend --model llama-3.3-70b --hardware fixture:apple-m4-max-128gb --quants Q6_K,Q5_K_M,Q4_K_M,Q3_K_M --contexts 4096,8192,16384,32768 --backends auto --target tight">Copy recommend command</button>
   </section>
   <section class="section"><img src="compare_decode.svg" alt="compare_decode.svg">
 <img src="compare_margin.svg" alt="compare_margin.svg"></section>

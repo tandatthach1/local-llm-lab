@@ -22,6 +22,7 @@ from .hardware import detect_hardware
 from .models import list_presets
 from .planner import make_plan
 from .profiles import list_profiles, load_profile, load_profile_document, save_profile
+from .recommend import RecommendRequest, recommend_plans, write_recommend_outputs
 from .render import print_json, print_plan
 from .report import generate_report
 from .server import serve_directory
@@ -234,6 +235,58 @@ def cmd_compare(args: argparse.Namespace) -> int:
     return 0
 
 
+def _compare_request_from_args(args: argparse.Namespace) -> CompareRequest:
+    if not args.model and not args.params:
+        raise SystemExit("Either --model or --params is required.")
+    hardware_fixture, hardware_profile, hardware_label = _resolve_hardware_ref(args.hardware)
+    return CompareRequest(
+        model_name=args.model,
+        params=args.params,
+        quantizations=parse_csv(args.quants, DEFAULT_COMPARE_QUANTS),
+        contexts=parse_int_csv(args.contexts, DEFAULT_COMPARE_CONTEXTS),
+        backends=parse_csv(args.backends, DEFAULT_COMPARE_BACKENDS),
+        concurrency=args.concurrency,
+        model_format=args.format,
+        hardware_fixture=hardware_fixture,
+        hardware_profile=hardware_profile,
+        hardware_label=hardware_label,
+        layers=args.layers,
+        heads=args.heads,
+        kv_heads=args.kv_heads,
+        head_dim=args.head_dim,
+        kv_dtype_bytes=args.kv_dtype_bytes,
+    )
+
+
+def cmd_recommend(args: argparse.Namespace) -> int:
+    request = RecommendRequest(compare_request=_compare_request_from_args(args), target=args.target)
+    result = recommend_plans(request)
+    written = write_recommend_outputs(result, args.out) if args.out else None
+    if args.json:
+        print_json(result if not written else {"recommendation": result["recommendation"], "outputs": written})
+    else:
+        rec = result["recommendation"]
+        best = rec["best"]
+        print(f"Recommendation: {rec['status']} target={rec['target']}")
+        print(f"- backend: {best['backend']}")
+        print(f"- quantization: {best['quantization']}")
+        print(f"- context: {best['context_tokens']} tokens")
+        print(f"- verdict: {best['verdict']} risk={best['risk_level']}")
+        print(f"- margin: {best['margin_gib']} GiB")
+        print(f"- estimated decode: {best['decode_tokens_s_mid']} tok/s")
+        print("Why:")
+        for item in rec["why"]:
+            print(f"- {item}")
+        print("Next steps:")
+        for item in rec["next_steps"]:
+            print(f"- {item}")
+        print("Deploy dry-run:")
+        print(rec["deploy_command"])
+        if written:
+            print(f"Recommendation written in {written['out_dir']}")
+    return 0
+
+
 def cmd_demo(args: argparse.Namespace) -> int:
     out_dir = Path(args.out)
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -358,6 +411,26 @@ def build_parser() -> argparse.ArgumentParser:
     compare.add_argument("--out", help="Write compare.json, compare.md, charts, and index.html")
     compare.add_argument("--json", action="store_true")
     compare.set_defaults(func=cmd_compare)
+
+    recommend = sub.add_parser("recommend", help="Pick the best local run plan from a scanned matrix.")
+    group = recommend.add_mutually_exclusive_group(required=False)
+    group.add_argument("--model", help="Curated model preset, e.g. llama-3.3-70b")
+    group.add_argument("--params", help="Free-form parameter count, e.g. 70B, 120B, 600B")
+    recommend.add_argument("--quants", default=None, help="Comma-separated quantizations. Default: Q8_0,Q6_K,Q5_K_M,Q4_K_M,Q3_K_M,IQ2_XS")
+    recommend.add_argument("--contexts", default=None, help="Comma-separated context lengths. Default: 4096,8192,16384,32768")
+    recommend.add_argument("--backends", default=None, help="Comma-separated backends. Default: auto")
+    recommend.add_argument("--target", choices=["smooth", "tight"], default="tight", help="Required comfort target. Default: tight")
+    recommend.add_argument("--concurrency", type=int, default=1)
+    recommend.add_argument("--format", default=None)
+    recommend.add_argument("--hardware", default=None, help="Use fixture:name or profile:name")
+    recommend.add_argument("--layers", type=int, default=None)
+    recommend.add_argument("--heads", type=int, default=None)
+    recommend.add_argument("--kv-heads", type=int, default=None)
+    recommend.add_argument("--head-dim", type=int, default=None)
+    recommend.add_argument("--kv-dtype-bytes", type=float, default=2.0)
+    recommend.add_argument("--out", help="Write recommend.json and recommend.md into this directory")
+    recommend.add_argument("--json", action="store_true")
+    recommend.set_defaults(func=cmd_recommend)
 
     serve = sub.add_parser("serve", help="Serve a generated report directory on localhost.")
     serve.add_argument("--dir", required=True)

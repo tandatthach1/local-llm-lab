@@ -88,6 +88,21 @@ def _deploy_command(request: CompareRequest, plan: PlanResult) -> str:
     return " ".join(shlex.quote(part) for part in command)
 
 
+def _recommend_command(request: CompareRequest, *, target: str = "tight") -> str:
+    command = ["python3", "-m", "local_llm_lab", "recommend"]
+    if request.model_name:
+        command.extend(["--model", request.model_name])
+    elif request.params:
+        command.extend(["--params", request.params])
+    if request.hardware_label:
+        command.extend(["--hardware", request.hardware_label])
+    command.extend(["--quants", ",".join(request.quantizations)])
+    command.extend(["--contexts", ",".join(str(item) for item in request.contexts)])
+    command.extend(["--backends", ",".join(request.backends)])
+    command.extend(["--target", target])
+    return " ".join(shlex.quote(part) for part in command)
+
+
 def compare_plans(request: CompareRequest) -> dict[str, Any]:
     plans: list[PlanResult] = []
     for backend in request.backends:
@@ -169,6 +184,7 @@ def compare_plans(request: CompareRequest) -> dict[str, Any]:
                     "decode_tokens_s_mid": best.expected_decode_tokens_s["mid"],
                     "deploy_command": _deploy_command(request, best),
                 },
+                "recommend_command": _recommend_command(request),
             },
             "rows": rows,
         }
@@ -221,6 +237,7 @@ def compare_html(data: dict[str, Any], chart_files: list[str]) -> str:
     best = summary["best"]
     verdict_counts = summary.get("verdict_counts", {})
     best_command = html.escape(str(best.get("deploy_command", "")), quote=True)
+    recommend_command = html.escape(str(summary.get("recommend_command", "")), quote=True)
     row_chunks = []
     for row in compare["rows"]:
         is_best = (
@@ -264,6 +281,12 @@ def compare_html(data: dict[str, Any], chart_files: list[str]) -> str:
     risk_note = "No runnable candidate found. Treat every command as a dry-run starting point, not a recommendation."
     if summary["runnable_plans"]:
         risk_note = "Best candidate is the first smooth/tight plan after risk, precision, context, speed, and memory margin sorting."
+    reason = (
+        f"{summary['runnable_plans']} of {summary['total_plans']} candidates are runnable. "
+        f"The highlighted candidate balances verdict, risk, quantization quality, context length, speed, and memory margin."
+        if summary["runnable_plans"]
+        else "No runnable candidate was found in this matrix. Lower quantization, shorten context, or use different hardware."
+    )
     return f"""<!doctype html>
 <html lang="en">
 <head>
@@ -289,6 +312,9 @@ def compare_html(data: dict[str, Any], chart_files: list[str]) -> str:
     .neutral {{ color: #334155; background: #e2e8f0; }}
     .section {{ margin-top: 20px; }}
     .notice {{ border-left: 4px solid #2563eb; background: #eff6ff; padding: 12px 14px; margin-top: 14px; color: #1e3a8a; }}
+    .recommend {{ border: 1px solid #d9dee8; background: #fff; border-radius: 8px; padding: 16px; margin: 18px 0; }}
+    .recommend h2 {{ margin: 0 0 8px; font-size: 18px; }}
+    .recommend p {{ margin: 0 0 12px; color: #374151; line-height: 1.45; }}
     .toolbar {{ display: flex; flex-wrap: wrap; gap: 10px; align-items: end; margin: 16px 0 12px; }}
     .control {{ display: grid; gap: 5px; }}
     .control label {{ color: #667085; font-size: 12px; text-transform: uppercase; }}
@@ -322,6 +348,12 @@ def compare_html(data: dict[str, Any], chart_files: list[str]) -> str:
     <p class="notice">{html.escape(risk_note)} Verdict counts: {html.escape(json.dumps(verdict_counts, sort_keys=True))}</p>
     <code id="bestCommand">{best_command}</code>
     <button class="primary" data-copy="{best_command}">Copy best deploy dry-run</button>
+  </section>
+  <section class="recommend">
+    <h2>Recommendation reason</h2>
+    <p>{html.escape(reason)}</p>
+    <code>{recommend_command}</code>
+    <button class="primary" data-copy="{recommend_command}">Copy recommend command</button>
   </section>
   <section class="section">{charts}</section>
   <section class="section">

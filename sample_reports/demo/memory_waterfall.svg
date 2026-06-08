@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="320" viewBox="0 0 900 320">
+<rect width="100%" height="100%" fill="#ffffff"/>
+<text x="24" y="34" font-size="20" font-weight="700">Memory waterfall</text>
+<text x="24" y="56" font-size="13" fill="#5b6472">Estimated memory components versus available runtime memory.</text>
+<rect x="170" y="76" width="686" height="34" fill="#f1f5f9" stroke="#cbd5e1"/>
+<rect x="170.0" y="76" width="565.5" height="34" fill="#2563eb"/><title>weights: 325.44 GiB</title>
+<rect x="735.5" y="76" width="55.6" height="34" fill="#0891b2"/><title>KV cache: 32.00 GiB</title>
+<rect x="791.1" y="76" width="23.3" height="34" fill="#7c3aed"/><title>backend: 13.39 GiB</title>
+<rect x="814.4" y="76" width="10.4" height="34" fill="#ea580c"/><title>activation: 6.01 GiB</title>
+<rect x="824.9" y="76" width="31.1" height="34" fill="#64748b"/><title>OS reserve: 17.92 GiB</title>
+<line x1="361.2" y1="62" x2="361.2" y2="124" stroke="#dc2626" stroke-width="3"/>
+<text x="369.2" y="58" font-size="13" fill="#dc2626">available runtime: 110.00 GiB</text>
+<text x="170" y="144" font-size="13" fill="#dc2626">margin: -266.84 GiB</text>
+<rect x="24" y="133" width="12" height="12" fill="#2563eb"/><text x="44" y="143" font-size="13">weights: 325.44 GiB</text>
+<rect x="24" y="161" width="12" height="12" fill="#0891b2"/><text x="44" y="171" font-size="13">KV cache: 32.00 GiB</text>
+<rect x="24" y="189" width="12" height="12" fill="#7c3aed"/><text x="44" y="199" font-size="13">backend: 13.39 GiB</text>
+<rect x="24" y="217" width="12" height="12" fill="#ea580c"/><text x="44" y="227" font-size="13">activation: 6.01 GiB</text>
+<rect x="24" y="245" width="12" height="12" fill="#64748b"/><text x="44" y="255" font-size="13">OS reserve: 17.92 GiB</text>
+</svg>

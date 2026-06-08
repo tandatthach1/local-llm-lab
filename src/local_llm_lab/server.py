@@ -25,8 +25,28 @@ def _fmt(value: object, fallback: str = "unknown") -> str:
 
 def _report_card(root: Path, directory: Path) -> dict[str, object] | None:
     index = directory / "index.html"
+    recommend_json = directory / "recommend.json"
     compare_json = directory / "compare.json"
     report_json = directory / "report.json"
+    if recommend_json.exists():
+        data = _load_json(recommend_json)
+        recommendation = data.get("recommendation", {}) if data else {}
+        best = recommendation.get("best", {}) if isinstance(recommendation, dict) else {}
+        status = _fmt(recommendation.get("status") if isinstance(recommendation, dict) else None)
+        md = directory / "recommend.md"
+        return {
+            "kind": "recommend",
+            "title": _fmt(best.get("model") if isinstance(best, dict) else None, directory.name),
+            "subtitle": f"target={_fmt(recommendation.get('target') if isinstance(recommendation, dict) else None)}",
+            "verdict": _fmt(best.get("verdict") if isinstance(best, dict) else status),
+            "risk": _fmt(best.get("risk_level") if isinstance(best, dict) else None),
+            "metric": f"{_fmt(best.get('quantization') if isinstance(best, dict) else None)} / {_fmt(best.get('context_tokens') if isinstance(best, dict) else None)} ctx",
+            "detail": f"{status} · {_fmt(best.get('decode_tokens_s_mid') if isinstance(best, dict) else None)} tok/s",
+            "action": "Open recommendation, then generate deploy files and run preflight." if status == "recommended" else "Open recommendation and follow downgrade options before deploying.",
+            "href": md.relative_to(root).as_posix() if md.exists() else recommend_json.relative_to(root).as_posix(),
+            "json": recommend_json.relative_to(root).as_posix(),
+            "mtime": directory.stat().st_mtime,
+        }
     if compare_json.exists():
         data = _load_json(compare_json)
         compare = data.get("compare", {}) if data else {}
@@ -41,6 +61,7 @@ def _report_card(root: Path, directory: Path) -> dict[str, object] | None:
             "risk": _fmt(best.get("risk_level") if isinstance(best, dict) else None),
             "metric": f"{_fmt(best.get('quantization') if isinstance(best, dict) else None)} / {_fmt(best.get('context_tokens') if isinstance(best, dict) else None)} ctx",
             "detail": f"{_fmt(best.get('backend') if isinstance(best, dict) else None)} · {_fmt(best.get('decode_tokens_s_mid') if isinstance(best, dict) else None)} tok/s",
+            "action": "Open compare report, then copy the recommend or deploy command.",
             "href": index.relative_to(root).as_posix() if index.exists() else compare_json.relative_to(root).as_posix(),
             "json": compare_json.relative_to(root).as_posix(),
             "mtime": directory.stat().st_mtime,
@@ -67,11 +88,24 @@ def _report_card(root: Path, directory: Path) -> dict[str, object] | None:
             "risk": _fmt(plan.get("risk_level") if isinstance(plan, dict) else None),
             "metric": f"{_fmt(memory.get('margin_gib') if isinstance(memory, dict) else None)} GiB margin",
             "detail": f"{_fmt(decode)} tok/s short prompt",
+            "action": _best_action(_fmt(plan.get("verdict") if isinstance(plan, dict) else None)),
             "href": index.relative_to(root).as_posix() if index.exists() else report_json.relative_to(root).as_posix(),
             "json": report_json.relative_to(root).as_posix(),
             "mtime": directory.stat().st_mtime,
         }
     return None
+
+
+def _best_action(verdict: str) -> str:
+    if verdict == "smooth":
+        return "Generate deploy files, run preflight, then validate with a short benchmark."
+    if verdict == "tight":
+        return "Run preflight and shorten context if memory pressure rises."
+    if verdict == "not-recommended":
+        return "Lower quantization or context before attempting a real launch."
+    if verdict == "does-not-fit":
+        return "Do not launch locally; choose a smaller model or remote/hybrid inference."
+    return "Open the report and inspect warnings before running anything."
 
 
 def render_report_hub(root: Path) -> str | None:
@@ -143,6 +177,7 @@ def _render_card(card: dict[str, object]) -> str:
     risk = html.escape(str(card["risk"]))
     metric = html.escape(str(card["metric"]))
     detail = html.escape(str(card["detail"]))
+    action = html.escape(str(card.get("action", "Open the report and inspect next steps.")))
     href = html.escape(str(card["href"]), quote=True)
     json_href = html.escape(str(card["json"]), quote=True)
     return f"""
@@ -156,6 +191,7 @@ def _render_card(card: dict[str, object]) -> str:
         <div class="metric"><span class="label">Best setting</span><strong>{metric}</strong></div>
         <div class="metric"><span class="label">Performance</span><strong>{detail}</strong></div>
       </div>
+      <div class="metric"><span class="label">Best action</span><strong>{action}</strong></div>
       <div class="links"><a href="{href}">Open report</a><a href="{json_href}">JSON</a></div>
     </article>
     """
